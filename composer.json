@@ -1,0 +1,11 @@
+{
+  "name": "dannykopping/amf",
+  "require": {
+    "php": ">=5.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "AMF\\": "lib/"
+    }
+  }
+}
