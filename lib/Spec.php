@@ -13,11 +13,11 @@ class Spec
     const MARKER_NULL      = 0x01;
     const MARKER_FALSE     = 0x02;
     const MARKER_TRUE      = 0x03;
-    const MARKER_INT       = 0x04;
 
     /**
      * Types represent their proceeding value
      */
+    const TYPE_INT           = 0x04;
     const TYPE_DOUBLE        = 0x05;
     const TYPE_STRING        = 0x06;
     const TYPE_XML_DOC       = 0x07;
@@ -31,4 +31,23 @@ class Spec
     const TYPE_VECTOR_DOUBLE = 0x0F;
     const TYPE_VECTOR_OBJECT = 0x10;
     const TYPE_DICTIONARY    = 0x11;
+
+    public static function getMaxInt()
+    {
+        return pow(2, 28) - 1;
+    }
+
+    public static function getMinInt()
+    {
+        return pow(-2, 29);
+    }
+
+    /**
+     * @link http://stackoverflow.com/a/9745170
+     */
+    public static function isBigEndian()
+    {
+        $test = unpack("C*", pack("S*", 256));
+        return !$test[1] == 1;
+    }
 }
