@@ -10,9 +10,12 @@ class Serializer
 {
     private static $packet = null;
 
+    private static $stringRefs;
+
     public static function init()
     {
         self::$packet = null;
+        self::$stringRefs = [];
     }
 
     public static function run($data)
@@ -38,6 +41,10 @@ class Serializer
                 self::serializeDouble($data);
                 break;
 
+            case is_string($data):
+                self::serializeString($data);
+                break;
+
             default:
                 throw new Exception('Unrecognized AMF type for data: ' . var_export($data));
                 break;
@@ -61,7 +68,7 @@ class Serializer
         self::writeBytes($value === true ? Spec::MARKER_TRUE : Spec::MARKER_FALSE);
     }
 
-    private static function serializeInt($value)
+    private static function serializeInt($value, $includeType = true)
     {
         // AMF3 uses "Variable Length Unsigned 29-bit Integer Encoding"
         // ...depending on the length, we will add some flags or
@@ -74,7 +81,10 @@ class Serializer
 
         $value &= Spec::getMaxInt();
 
-        self::writeBytes(Spec::TYPE_INT);
+        if ($includeType) {
+            self::writeBytes(Spec::TYPE_INT);
+        }
+
         switch (true) {
             case $value < 0x80:
                 self::writeBytes($value);
@@ -109,11 +119,44 @@ class Serializer
             $bin = strrev($bin);
         }
 
-        self::$packet .= $bin;
+        self::writeBytes($bin, true);
     }
 
-    private static function writeBytes($bytes)
+    private static function serializeString($data)
     {
-        self::$packet .= pack('c', $bytes);
+        self::writeBytes(Spec::TYPE_STRING);
+
+        $ref = self::getStringRef($data);
+        if ($ref !== false) {
+            // use reference
+            self::serializeInt($ref << 1, false);
+            return;
+        }
+
+        self::serializeInt((strlen($data) << 1) | 1, false);
+        self::writeBytes($data, true);
+    }
+
+    private static function getStringRef($string)
+    {
+        // empty strings cannot have references
+        if (empty($string)) {
+            return false;
+        }
+
+        // reference found
+        if (isset(self::$stringRefs[$string])) {
+            return (int) self::$stringRefs[$string];
+        }
+
+        // create reference
+        $nextID                    = count(self::$stringRefs);
+        self::$stringRefs[$string] = $nextID;
+        return false;
+    }
+
+    private static function writeBytes($bytes, $raw = false)
+    {
+        self::$packet .= $raw ? $bytes : pack('c', $bytes);
     }
 } 
