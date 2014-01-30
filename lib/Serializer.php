@@ -1,7 +1,10 @@
 <?php
 namespace AMF;
 
+use AMF\Exception\NotSupportedException;
+use DateTime;
 use Exception;
+use SimpleXMLElement;
 
 /**
  * @author Danny Kopping <dannykopping@gmail.com>
@@ -10,12 +13,12 @@ class Serializer
 {
     private static $packet = null;
 
-    private static $stringRefs;
+    private static $references;
 
     public static function init()
     {
-        self::$packet = null;
-        self::$stringRefs = [];
+        self::$packet     = null;
+        self::$references = [];
     }
 
     public static function run($data)
@@ -43,6 +46,14 @@ class Serializer
 
             case is_string($data):
                 self::serializeString($data);
+                break;
+
+            case ($data instanceof SimpleXMLElement):
+                throw new NotSupportedException('XML serialization is not supported');
+                break;
+
+            case ($data instanceof DateTime):
+                self::serializeDate($data);
                 break;
 
             default:
@@ -110,9 +121,11 @@ class Serializer
         }
     }
 
-    private static function serializeDouble($value)
+    private static function serializeDouble($value, $includeType = true)
     {
-        self::writeBytes(Spec::TYPE_DOUBLE);
+        if ($includeType) {
+            self::writeBytes(Spec::TYPE_DOUBLE);
+        }
 
         $bin = pack("d", $value);
         if (Spec::isBigEndian()) {
@@ -122,11 +135,13 @@ class Serializer
         self::writeBytes($bin, true);
     }
 
-    private static function serializeString($data)
+    private static function serializeString($data, $includeType = true)
     {
-        self::writeBytes(Spec::TYPE_STRING);
+        if ($includeType) {
+            self::writeBytes(Spec::TYPE_STRING);
+        }
 
-        $ref = self::getStringRef($data);
+        $ref = self::getOrCreateReference($data);
         if ($ref !== false) {
             // use reference
             self::serializeInt($ref << 1, false);
@@ -137,21 +152,36 @@ class Serializer
         self::writeBytes($data, true);
     }
 
-    private static function getStringRef($string)
+    private static function serializeDate(DateTime $data)
     {
-        // empty strings cannot have references
-        if (empty($string)) {
+        // @see http://php.net/manual/en/datetime.gettimestamp.php#98374
+        // use the format() option rather than getTimestamp
+        $millisSinceEpoch = $data->format('U') * 1000;
+
+        self::writeBytes(Spec::TYPE_DATE);
+        $ref = self::getOrCreateReference($millisSinceEpoch);
+        if($ref !== false) {
+            self::serializeInt($ref << 1);
+        }
+
+        self::serializeInt($millisSinceEpoch);
+    }
+
+    private static function getOrCreateReference($object)
+    {
+        // empty objects cannot have references
+        if (empty($object)) {
             return false;
         }
 
         // reference found
-        if (isset(self::$stringRefs[$string])) {
-            return (int) self::$stringRefs[$string];
+        if (isset(self::$references[$object])) {
+            return (int) self::$references[$object];
         }
 
         // create reference
-        $nextID                    = count(self::$stringRefs);
-        self::$stringRefs[$string] = $nextID;
+        $nextID                    = count(self::$references);
+        self::$references[$object] = $nextID;
         return false;
     }
 

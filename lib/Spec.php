@@ -20,11 +20,11 @@ class Spec
     const TYPE_INT           = 0x04;
     const TYPE_DOUBLE        = 0x05;
     const TYPE_STRING        = 0x06;
-    const TYPE_XML_DOC       = 0x07;
+    const TYPE_XML_DOC       = 0x07;    // not supported
     const TYPE_DATE          = 0x08;
     const TYPE_ARRAY         = 0x09;
     const TYPE_OBJECT        = 0x0A;
-    const TYPE_XML           = 0x0B;
+    const TYPE_XML           = 0x0B;    // not supported
     const TYPE_BYTE_ARRAY    = 0x0C;
     const TYPE_VECTOR_INT    = 0x0D;
     const TYPE_VECTOR_UINT   = 0x0E;
