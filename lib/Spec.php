@@ -50,4 +50,31 @@ class Spec
         $test = unpack("C*", pack("S*", 256));
         return !$test[1] == 1;
     }
+
+    /**
+     * Determine if a given array is "dense".
+     *
+     * From the AMF spec:
+     * "ordinal indices start at 0 and do not contain gaps between successive
+     *  indices (that is, every index is defined from 0 for the length of the array)"
+     *
+     * @param $array
+     *
+     * @return bool
+     */
+    public static function isDenseArray($array)
+    {
+        $arrayLength = count($array);
+        if(!$arrayLength) {
+            return true;
+        }
+
+        // generate a dense array with incrementing numeric keys
+        $keyTest = array_flip(range(0, $arrayLength - 1));
+
+        // perform a diff on the two arrays' keys - if there are any differences,
+        // then this array is not dense.
+        $diff = array_diff_key($keyTest, $array);
+        return empty($diff);
+    }
 }

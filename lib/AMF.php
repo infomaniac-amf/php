@@ -14,7 +14,7 @@ class AMF
         try {
             Serializer::init();
 
-            return Serializer::run($data);
+            return Serializer::serialize($data);
         } catch (Exception $e) {
             $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
             $ex->setData($data);

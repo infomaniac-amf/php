@@ -13,39 +13,42 @@ class Serializer
 {
     private static $packet = null;
 
-    private static $references;
+    /**
+     * @var ReferenceStore
+     */
+    protected static $referenceStore;
 
     public static function init()
     {
         self::$packet     = null;
-        self::$references = [];
+        self::$referenceStore = new ReferenceStore();
     }
 
-    public static function run($data)
+    public static function serialize($data, $includeType = true)
     {
         switch (true) {
             case $data instanceof Undefined:
-                self::serializeUndefined();
+                self::serializeUndefined($includeType);
                 break;
 
             case $data === null:
-                self::serializeNull();
+                self::serializeNull($includeType);
                 break;
 
             case $data === true || $data === false:
-                self::serializeBoolean($data);
+                self::serializeBoolean($data, $includeType);
                 break;
 
             case is_int($data):
-                self::serializeInt($data);
+                self::serializeInt($data, $includeType);
                 break;
 
             case is_float($data):
-                self::serializeDouble($data);
+                self::serializeDouble($data, $includeType);
                 break;
 
             case is_string($data):
-                self::serializeString($data);
+                self::serializeString($data, $includeType);
                 break;
 
             case ($data instanceof SimpleXMLElement):
@@ -53,7 +56,11 @@ class Serializer
                 break;
 
             case ($data instanceof DateTime):
-                self::serializeDate($data);
+                self::serializeDate($data, $includeType);
+                break;
+
+            case is_array($data):
+                self::serializeArray($data, $includeType);
                 break;
 
             default:
@@ -135,15 +142,15 @@ class Serializer
         self::writeBytes($bin, true);
     }
 
-    private static function serializeString($data, $includeType = true)
+    private static function serializeString($data, $includeType = true, $useRefs = true)
     {
         if ($includeType) {
             self::writeBytes(Spec::TYPE_STRING);
         }
 
-        $ref = self::getOrCreateReference($data);
-        if ($ref !== false) {
-            // use reference
+        $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_STRING);
+        if ($ref !== false && $useRefs) {
+             //use reference
             self::serializeInt($ref << 1, false);
             return;
         }
@@ -159,30 +166,44 @@ class Serializer
         $millisSinceEpoch = $data->format('U') * 1000;
 
         self::writeBytes(Spec::TYPE_DATE);
-        $ref = self::getOrCreateReference($millisSinceEpoch);
+        $ref = self::$referenceStore->getReference($millisSinceEpoch, ReferenceStore::TYPE_OBJECT);
         if($ref !== false) {
-            self::serializeInt($ref << 1);
+            //use reference
+            self::serializeInt($ref << 1, false);
         }
 
         self::serializeInt($millisSinceEpoch);
     }
 
-    private static function getOrCreateReference($object)
+    private static function serializeArray($data)
     {
-        // empty objects cannot have references
-        if (empty($object)) {
-            return false;
+        self::writeBytes(Spec::TYPE_ARRAY);
+
+        $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
+        if($ref !== false) {
+            //use reference
+            self::serializeInt($ref << 1, false);
+            return;
         }
 
-        // reference found
-        if (isset(self::$references[$object])) {
-            return (int) self::$references[$object];
-        }
+        $isDense = Spec::isDenseArray($data);
+        if($isDense) {
+            self::serializeInt((count($data) << 1) | 0x01, false);
+            self::serializeString('', false);
 
-        // create reference
-        $nextID                    = count(self::$references);
-        self::$references[$object] = $nextID;
-        return false;
+            foreach($data as $element) {
+                self::serialize($element);
+            }
+        } else {
+            self::serializeInt(1, false);
+
+            foreach($data as $key => $value) {
+                self::serializeString((string) $key, false);
+                self::serialize($value);
+            }
+
+            self::serializeString('', false);
+        }
     }
 
     private static function writeBytes($bytes, $raw = false)
