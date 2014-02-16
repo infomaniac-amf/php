@@ -35,6 +35,8 @@ class Spec
     const OBJECT_DYNAMIC        = 0x00;
     const OBJECT_EXTERNALIZABLE = 0x01;
 
+    const REFERENCE_BIT = 0x01;
+
     public static function getMaxInt()
     {
         return pow(2, 28) - 1;

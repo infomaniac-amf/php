@@ -2,6 +2,7 @@
 namespace AMF;
 
 use AMF\Exception\NotSupportedException;
+use AMF\Exception\SerializationException;
 use DateTime;
 use Exception;
 use SimpleXMLElement;
@@ -57,6 +58,10 @@ class Serializer
 
             case ($data instanceof DateTime):
                 self::serializeDate($data, $includeType);
+                break;
+
+            case ($data instanceof ByteArray):
+                self::serializeByteArray($data, $includeType);
                 break;
 
             case is_array($data):
@@ -194,17 +199,18 @@ class Serializer
 
         $isDense = Spec::isDenseArray($data);
         if ($isDense) {
-            self::serializeInt((count($data) << 1) | 0x01, false);
+            self::serializeInt((count($data) << 1) | Spec::REFERENCE_BIT, false);
             self::serializeString('', false);
 
             foreach ($data as $element) {
                 self::serialize($element);
             }
+
         } else {
             self::serializeInt(1, false);
 
             foreach ($data as $key => $value) {
-                self::serializeString((string) $key, false);
+                self::serializeString((string) $key, false, false);
                 self::serialize($value);
             }
 
@@ -240,23 +246,24 @@ class Serializer
         }
 
         // write object info & class name
-        self::serializeInt(($numProperties << 0x04) | ((int) $externalizable << 0x02) | 0x03, false);
-        self::serializeString(self::getObjectClassname($data), false);
+        if($dynamic) {
+            self::serializeInt(0x0b, false);
+        } else {
+            self::serializeInt(($numProperties << 0x04) | ((int) $externalizable << 0x02) | 0x03, false);
+        }
+
+        self::serializeString(self::getObjectClassname($data), false, false);
 
         if ($dynamic) {
 
             // write keys
             foreach ($properties as $key => $value) {
                 self::serializeString($key, false, false);
-            }
-
-            // write values
-            foreach ($properties as $key => $value) {
                 self::serialize($value);
             }
 
             // close
-            self::serializeInt(0x01, false);
+            self::serializeInt(Spec::REFERENCE_BIT, false);
         } else {
 
             /**
@@ -267,6 +274,20 @@ class Serializer
             // write values
             self::serialize($external);
         }
+    }
+
+    private static function serializeByteArray($data, $includeType = true)
+    {
+        if ($includeType) {
+            self::writeBytes(Spec::TYPE_BYTE_ARRAY);
+        }
+
+        if (!$data instanceof ByteArray) {
+            throw new SerializationException('Invalid ByteArray data provided');
+        }
+
+        self::serializeInt(strlen($data->getData()) << 1 | Spec::REFERENCE_BIT, false);
+        self::writeBytes($data->getData(), true);
     }
 
     private static function writeBytes($bytes, $raw = false)
