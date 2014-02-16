@@ -1,5 +1,6 @@
 <?php
 use AMF\AMF;
+use AMF\IExternalizable;
 use AMF\Spec;
 use AMF\Undefined;
 
@@ -54,4 +55,48 @@ class SerializationTest extends PHPUnit_Framework_TestCase
     {
         $this->assertEquals('060b68656c6c6f', bin2hex(AMF::serialize('hello')));
     }
-} 
+
+    public function testSerializeObject()
+    {
+        // dynamic object
+        $dyn = new stdClass();
+        $dyn->a = 'b';
+        $dyn->b = array('123');
+
+        $this->assertEquals('0a230103610362060362090301060731323301', bin2hex(AMF::serialize($dyn)));
+
+        // externalizable object
+        $ext = new ExternalizableClass();
+        $ext->doesnot = 'matter';
+        $ext->what = 'properties';
+        $ext->are = 'defined';
+
+        // serialization of externalized objects does not necessarily include class members
+        $this->assertNotEquals('0a332745787465726e616c697a61626c65436c6173730f646f65736e6f74097768617407617265060d6d6174746572061570726f70657274696573060f646566696e656401', bin2hex(AMF::serialize($ext)));
+        $this->assertEquals('0a072745787465726e616c697a61626c65436c6173730901036106036201', bin2hex(AMF::serialize($ext)));
+
+        // object with no properties
+        $null = new stdClass();
+        $this->assertEquals('0a030101', bin2hex(AMF::serialize($null)));
+    }
+}
+
+class ExternalizableClass implements IExternalizable {
+
+    /**
+     * Write externally provided data into object
+     *
+     * @param $data
+     */
+    function setExternalData($data) {}
+
+    /**
+     * Read this object's data for external usage
+     *
+     * @return mixed
+     */
+    function getExternalData()
+    {
+        return array('a' => 'b');
+    }
+}

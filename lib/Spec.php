@@ -32,6 +32,9 @@ class Spec
     const TYPE_VECTOR_OBJECT = 0x10;
     const TYPE_DICTIONARY    = 0x11;
 
+    const OBJECT_DYNAMIC        = 0x00;
+    const OBJECT_EXTERNALIZABLE = 0x01;
+
     public static function getMaxInt()
     {
         return pow(2, 28) - 1;
@@ -76,5 +79,33 @@ class Spec
         // then this array is not dense.
         $diff = array_diff_key($keyTest, $array);
         return empty($diff);
+    }
+
+    /**
+     * Determine if an object is externalizable, based on its implementing the correct interface
+     *
+     * @param $data
+     *
+     * @return bool
+     */
+    public static function isExternalizable($data)
+    {
+        if(empty($data) || !is_object($data)) {
+            return false;
+        }
+
+        return $data instanceof IExternalizable;
+    }
+
+    /**
+     * Determine if an object is dynamic, i.e. not externalizable
+     *
+     * @param $data
+     *
+     * @return bool
+     */
+    public static function isDynamic($data)
+    {
+        return !self::isExternalizable($data);
     }
 }

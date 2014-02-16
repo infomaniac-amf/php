@@ -20,7 +20,7 @@ class Serializer
 
     public static function init()
     {
-        self::$packet     = null;
+        self::$packet         = null;
         self::$referenceStore = new ReferenceStore();
     }
 
@@ -61,6 +61,10 @@ class Serializer
 
             case is_array($data):
                 self::serializeArray($data, $includeType);
+                break;
+
+            case is_object($data):
+                self::serializeObject($data, $includeType);
                 break;
 
             default:
@@ -148,11 +152,13 @@ class Serializer
             self::writeBytes(Spec::TYPE_STRING);
         }
 
-        $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_STRING);
-        if ($ref !== false && $useRefs) {
-             //use reference
-            self::serializeInt($ref << 1, false);
-            return;
+        if ($useRefs) {
+            $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_STRING);
+            if ($ref !== false) {
+                //use reference
+                self::serializeInt($ref << 1, false);
+                return;
+            }
         }
 
         self::serializeInt((strlen($data) << 1) | 1, false);
@@ -167,7 +173,7 @@ class Serializer
 
         self::writeBytes(Spec::TYPE_DATE);
         $ref = self::$referenceStore->getReference($millisSinceEpoch, ReferenceStore::TYPE_OBJECT);
-        if($ref !== false) {
+        if ($ref !== false) {
             //use reference
             self::serializeInt($ref << 1, false);
         }
@@ -180,24 +186,24 @@ class Serializer
         self::writeBytes(Spec::TYPE_ARRAY);
 
         $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
-        if($ref !== false) {
+        if ($ref !== false) {
             //use reference
             self::serializeInt($ref << 1, false);
             return;
         }
 
         $isDense = Spec::isDenseArray($data);
-        if($isDense) {
+        if ($isDense) {
             self::serializeInt((count($data) << 1) | 0x01, false);
             self::serializeString('', false);
 
-            foreach($data as $element) {
+            foreach ($data as $element) {
                 self::serialize($element);
             }
         } else {
             self::serializeInt(1, false);
 
-            foreach($data as $key => $value) {
+            foreach ($data as $key => $value) {
                 self::serializeString((string) $key, false);
                 self::serialize($value);
             }
@@ -206,8 +212,82 @@ class Serializer
         }
     }
 
+    private static function serializeObject($data)
+    {
+        self::writeBytes(Spec::TYPE_OBJECT);
+
+        $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
+        if ($ref !== false) {
+            //use reference
+            self::serializeInt($ref << 1, false);
+            return;
+        }
+
+        $externalizable = Spec::isExternalizable($data);
+        $dynamic        = Spec::isDynamic($data);
+        $numProperties  = 0;
+        $properties     = array();
+
+        if ($dynamic) {
+            try {
+                // Get the accessible non-static properties of the given object according to scope
+                $properties = get_object_vars($data);
+            } catch (Exception $e) {
+                $properties = [];
+            }
+
+            $numProperties = count($properties);
+        }
+
+        // write object info & class name
+        self::serializeInt(($numProperties << 0x04) | ((int) $externalizable << 0x02) | 0x03, false);
+        self::serializeString(self::getObjectClassname($data), false);
+
+        if ($dynamic) {
+
+            // write keys
+            foreach ($properties as $key => $value) {
+                self::serializeString($key, false, false);
+            }
+
+            // write values
+            foreach ($properties as $key => $value) {
+                self::serialize($value);
+            }
+
+            // close
+            self::serializeInt(0x01, false);
+        } else {
+
+            /**
+             * @var $data IExternalizable
+             */
+            $external = (!empty($data)) ? $data->getExternalData() : null;
+
+            // write values
+            self::serialize($external);
+        }
+    }
+
     private static function writeBytes($bytes, $raw = false)
     {
         self::$packet .= $raw ? $bytes : pack('c', $bytes);
+    }
+
+    /**
+     * Get the fully-qualified classname for a given typed object
+     *
+     * @param $object
+     *
+     * @return null|string
+     */
+    private static function getObjectClassname($object)
+    {
+        if (!is_object($object)) {
+            return null;
+        }
+
+        $className = get_class($object);
+        return $className == 'stdClass' ? null : $className;
     }
 } 
