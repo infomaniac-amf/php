@@ -82,32 +82,4 @@ class Spec
         $diff = array_diff_key($keyTest, $array);
         return empty($diff);
     }
-
-    /**
-     * Determine if an object is externalizable, based on its implementing the correct interface
-     *
-     * @param $data
-     *
-     * @return bool
-     */
-    public static function isExternalizable($data)
-    {
-        if(empty($data) || !is_object($data)) {
-            return false;
-        }
-
-        return $data instanceof IExternalizable;
-    }
-
-    /**
-     * Determine if an object is dynamic, i.e. not externalizable
-     *
-     * @param $data
-     *
-     * @return bool
-     */
-    public static function isDynamic($data)
-    {
-        return !self::isExternalizable($data);
-    }
 }

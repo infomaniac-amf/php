@@ -2,6 +2,7 @@
 use AMF\AMF;
 use AMF\ByteArray;
 use AMF\IExternalizable;
+use AMF\ISerializable;
 use AMF\Spec;
 use AMF\Undefined;
 
@@ -30,7 +31,7 @@ class SerializationTest extends PHPUnit_Framework_TestCase
 
     public function testSerializeInt()
     {
-        $samples = [1, 13, 1398693, 100000000, 12345013, 9876543, Spec::getMaxInt() - 1];
+        $samples      = [1, 13, 1398693, 100000000, 12345013, 9876543, Spec::getMaxInt() - 1];
         $expectations = ["0401", "040d", "04d5af25", "0497ebe100", "0482f8deb5", "0482adb43f", "04bffffffe"];
 
         foreach ($samples as $sample) {
@@ -60,21 +61,19 @@ class SerializationTest extends PHPUnit_Framework_TestCase
     public function testSerializeObject()
     {
         // dynamic object
-        $dyn = new stdClass();
+        $dyn    = new stdClass();
         $dyn->a = 'b';
         $dyn->b = array('123');
 
         $this->assertEquals('0a0b0103610603620362090301060731323301', bin2hex(AMF::serialize($dyn)));
 
-        // externalizable object
-        $ext = new ExternalizableClass();
-        $ext->doesnot = 'matter';
-        $ext->what = 'properties';
-        $ext->are = 'defined';
+        // serializable
+        $serializable = new SerializableData();
+        $serializable->setName('Test');
 
-        // serialization of externalized objects does not necessarily include class members
-        $this->assertNotEquals('0a332745787465726e616c697a61626c65436c6173730f646f65736e6f74097768617407617265060d6d6174746572061570726f70657274696573060f646566696e656401', bin2hex(AMF::serialize($ext)));
-        $this->assertEquals('0a072745787465726e616c697a61626c65436c6173730901036106036201', bin2hex(AMF::serialize($ext)));
+        $this->assertEquals('0a0b2153657269616c697a61626c6544617461096e616d6506095465737411726576657273656406097473655401',
+            bin2hex(AMF::serialize($serializable))
+        );
 
         // object with no properties
         $null = new stdClass();
@@ -92,28 +91,52 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $bytes = new ByteArray(0b11000011101010); // 12522
         $this->assertEquals('0c0b3132353232', bin2hex(AMF::serialize($bytes)));
 
-        $bytes = new ByteArray(file_get_contents(__DIR__.'/php.ico'));
+        $bytes = new ByteArray(file_get_contents(__DIR__ . '/php.ico'));
         $this->assertEquals('0c8c6d424d360300000000000036000000280000001000000010000000010018000000000000030000c40e0000c40e00000000000000000000c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080c08080c08080c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080d7d7d7000000d7d7d7c08080c08080c08080c08080c08080c08080c08080d7d7d7000000d7d7d7c08080c08080c08080d7d7d7000000d7d7d7d7d7d7c08080c08080d7d7d7c08080c08080d7d7d7d7d7d7000000d7d7d7d7d7d7c08080c08080d7d7d7000000000000000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000000000000000d7d7d7d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000000000000000d7d7d7d7d7d7000000000000000000d7d7d7d7d7d7000000000000000000d7d7d7d7d7d7c08080d7d7d7d7d7d7d7d7d7c08080d7d7d7000000d7d7d7d7d7d7c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080c08080c08080c08080c08080d7d7d7000000d7d7d7c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080',
-            bin2hex(AMF::serialize($bytes)));
+            bin2hex(AMF::serialize($bytes))
+        );
     }
 }
 
-class ExternalizableClass implements IExternalizable {
+class SerializableData implements ISerializable
+{
+    private $name;
 
     /**
-     * Write externally provided data into object
-     *
-     * @param $data
+     * @param mixed $name
      */
-    function setExternalData($data) {}
+    public function setName($name)
+    {
+        $this->name = $name;
+    }
 
     /**
-     * Read this object's data for external usage
-     *
      * @return mixed
      */
-    function getExternalData()
+    public function getName()
     {
-        return array('a' => 'b');
+        return $this->name;
+    }
+
+    /**
+     * Return an associative array of class properties
+     *
+     * @return array
+     */
+    public function export()
+    {
+        return array('name' => $this->getName(), 'reversed' => strrev($this->getName()));
+    }
+
+    /**
+     * Import data from an external source into this class
+     *
+     * @param $data mixed
+     */
+    public function import($data)
+    {
+        if (isset($data['name'])) {
+            $this->setName($data['name']);
+        }
     }
 }

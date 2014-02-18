@@ -177,12 +177,6 @@ class Serializer
         $millisSinceEpoch = $data->format('U') * 1000;
 
         self::writeBytes(Spec::TYPE_DATE);
-        $ref = self::$referenceStore->getReference($millisSinceEpoch, ReferenceStore::TYPE_OBJECT);
-        if ($ref !== false) {
-            //use reference
-            self::serializeInt($ref << 1, false);
-        }
-
         self::serializeInt($millisSinceEpoch);
     }
 
@@ -229,51 +223,23 @@ class Serializer
             return;
         }
 
-        $externalizable = Spec::isExternalizable($data);
-        $dynamic        = Spec::isDynamic($data);
-        $numProperties  = 0;
-        $properties     = array();
-
-        if ($dynamic) {
-            try {
-                // Get the accessible non-static properties of the given object according to scope
-                $properties = get_object_vars($data);
-            } catch (Exception $e) {
-                $properties = [];
-            }
-
-            $numProperties = count($properties);
-        }
+        // Get the accessible non-static properties of the given object according to scope
+        $properties = $data instanceof ISerializable ? $data->export() : get_object_vars($data);
 
         // write object info & class name
-        if($dynamic) {
-            self::serializeInt(0x0b, false);
-        } else {
-            self::serializeInt(($numProperties << 0x04) | ((int) $externalizable << 0x02) | 0x03, false);
-        }
-
+        self::serializeInt(0b1011, false);
         self::serializeString(self::getObjectClassname($data), false, false);
 
-        if ($dynamic) {
-
-            // write keys
+        // write keys
+        if (count($properties)) {
             foreach ($properties as $key => $value) {
                 self::serializeString($key, false, false);
                 self::serialize($value);
             }
-
-            // close
-            self::serializeInt(Spec::REFERENCE_BIT, false);
-        } else {
-
-            /**
-             * @var $data IExternalizable
-             */
-            $external = (!empty($data)) ? $data->getExternalData() : null;
-
-            // write values
-            self::serialize($external);
         }
+
+        // close
+        self::serializeInt(Spec::REFERENCE_BIT, false);
     }
 
     private static function serializeByteArray($data, $includeType = true)
