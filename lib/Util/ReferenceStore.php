@@ -1,5 +1,5 @@
 <?php
-namespace AMF;
+namespace Infomaniac\Util;
 
 /**
  * @author Danny Kopping <danny.kopping@zando.co.za>

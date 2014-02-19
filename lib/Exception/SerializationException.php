@@ -1,5 +1,5 @@
 <?php
-namespace AMF\Exception;
+namespace Infomaniac\Exception;
 
 use Exception;
 

@@ -1,30 +1,23 @@
 <?php
-namespace AMF;
+namespace Infomaniac\AMF;
 
-use AMF\Exception\NotSupportedException;
-use AMF\Exception\SerializationException;
+use Infomaniac\AMF\Base;
+use Infomaniac\Exception\NotSupportedException;
+use Infomaniac\Exception\SerializationException;
+use Infomaniac\AMF\ISerializable;
+use Infomaniac\Util\ReferenceStore;
+use Infomaniac\AMF\Spec;
+use Infomaniac\Type\ByteArray;
 use DateTime;
 use Exception;
+use Infomaniac\Type\Undefined;
 use SimpleXMLElement;
 
 /**
  * @author Danny Kopping <dannykopping@gmail.com>
  */
-class Serializer
+class Serializer extends Base
 {
-    private static $packet = null;
-
-    /**
-     * @var ReferenceStore
-     */
-    protected static $referenceStore;
-
-    public static function init()
-    {
-        self::$packet         = null;
-        self::$referenceStore = new ReferenceStore();
-    }
-
     public static function serialize($data, $includeType = true)
     {
         switch (true) {

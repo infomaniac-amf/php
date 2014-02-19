@@ -1,28 +1,38 @@
 <?php
-namespace AMF;
+namespace Infomaniac\AMF;
 
-use AMF\Exception\SerializationException;
+use Infomaniac\AMF\Deserializer;
+use Infomaniac\Exception\SerializationException;
 use ErrorException;
 use Exception;
+use Infomaniac\AMF\Serializer;
 
 /**
  * @author Danny Kopping <dannykopping@gmail.com>
  */
 class AMF
 {
-    private static $debugMode = false;
+    public static $debugMode = false;
 
     public static function serialize($data)
     {
-        // if in debug mode, don't do anything to error handling - let it work normally
-        if(!self::$debugMode) {
-            set_error_handler('\\AMF\\AMF::errorHandler');
-        }
-
         try {
             Serializer::init();
 
             return Serializer::serialize($data);
+        } catch (Exception $e) {
+            $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
+            $ex->setData($data);
+            throw $ex;
+        }
+    }
+
+    public static function deserialize($data)
+    {
+        try {
+            Serializer::init();
+
+            return Deserializer::deserialize($data);
         } catch (Exception $e) {
             $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
             $ex->setData($data);
@@ -60,13 +70,5 @@ class AMF
                 return false; // Make sure this ends up in $php_errormsg, if appropriate
             }
         }
-    }
-}
-
-class Undefined
-{
-    public function __toString()
-    {
-        return null;
     }
 }

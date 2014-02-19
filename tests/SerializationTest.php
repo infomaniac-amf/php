@@ -1,10 +1,9 @@
 <?php
-use AMF\AMF;
-use AMF\ByteArray;
-use AMF\IExternalizable;
-use AMF\ISerializable;
-use AMF\Spec;
-use AMF\Undefined;
+use Infomaniac\AMF\AMF;
+use Infomaniac\Type\ByteArray;
+use Infomaniac\AMF\ISerializable;
+use Infomaniac\AMF\Spec;
+use Infomaniac\Type\Undefined;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 

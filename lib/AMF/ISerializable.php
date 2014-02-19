@@ -1,5 +1,5 @@
 <?php
-namespace AMF;
+namespace Infomaniac\AMF;
 
 interface ISerializable
 {
