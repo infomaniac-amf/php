@@ -1,7 +1,7 @@
 <?php
 namespace Infomaniac\AMF;
 
-use Infomaniac\AMF\AMF;
+use Infomaniac\IO\Stream;
 use Infomaniac\Util\ReferenceStore;
 
 /**
@@ -9,21 +9,35 @@ use Infomaniac\Util\ReferenceStore;
  */
 abstract class Base
 {
-    protected static $packet = null;
+    /**
+     * @var \Infomaniac\IO\Stream
+     */
+    protected $stream;
 
     /**
      * @var \Infomaniac\Util\ReferenceStore
      */
-    protected static $referenceStore;
+    protected $referenceStore;
 
-    public static function init()
+    public function __construct(Stream $stream)
     {
-        self::$packet         = null;
-        self::$referenceStore = new ReferenceStore();
+        $this->stream         = $stream;
+        $this->referenceStore = new ReferenceStore();
+    }
 
-        // if in debug mode, don't do anything to error handling - let it work normally
-        if(!AMF::$debugMode) {
-            set_error_handler('\\Infomaniac\\AMF\\AMF::errorHandler');
-        }
+    /**
+     * @param \Infomaniac\IO\Stream $stream
+     */
+    public function setStream($stream)
+    {
+        $this->stream = $stream;
+    }
+
+    /**
+     * @return \Infomaniac\IO\Stream
+     */
+    public function getStream()
+    {
+        return $this->stream;
     }
 } 

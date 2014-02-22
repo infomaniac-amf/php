@@ -7,4 +7,22 @@ namespace Infomaniac\IO;
 abstract class Stream
 {
     protected $raw;
+
+    public function __construct()
+    {
+        $this->raw = '';
+    }
+
+    /**
+     * @return string
+     */
+    public function getRaw()
+    {
+        return $this->raw;
+    }
+
+    public function __toString()
+    {
+        return $this->raw;
+    }
 } 

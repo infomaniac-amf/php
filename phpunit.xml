@@ -1,4 +1,4 @@
-<phpunit bootstrap="tests/bootstrap.php">
+<phpunit bootstrap="tests/bootstrap.php" stopOnFailure="true">
     <testsuites>
         <testsuite name="AMF">
             <directory>./tests</directory>

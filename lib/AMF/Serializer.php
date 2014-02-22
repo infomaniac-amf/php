@@ -1,128 +1,168 @@
 <?php
 namespace Infomaniac\AMF;
 
-use Infomaniac\AMF\Base;
-use Infomaniac\Exception\NotSupportedException;
-use Infomaniac\Exception\SerializationException;
-use Infomaniac\AMF\ISerializable;
-use Infomaniac\Util\ReferenceStore;
-use Infomaniac\AMF\Spec;
-use Infomaniac\Type\ByteArray;
 use DateTime;
 use Exception;
+use Infomaniac\Exception\SerializationException;
+use Infomaniac\IO\Output;
+use Infomaniac\Type\ByteArray;
 use Infomaniac\Type\Undefined;
-use SimpleXMLElement;
+use Infomaniac\Util\ReferenceStore;
 
 /**
  * @author Danny Kopping <dannykopping@gmail.com>
  */
 class Serializer extends Base
 {
-    public static function serialize($data, $includeType = true)
+    public function __construct(Output $stream)
+    {
+        parent::__construct($stream);
+    }
+
+    /**
+     * Return the AMF3 data type for given data
+     *
+     * @param $data
+     *
+     * @return int|null
+     */
+    private function getDataType($data)
     {
         switch (true) {
             case $data instanceof Undefined:
-                self::serializeUndefined($includeType);
+                return Spec::AMF3_UNDEFINED;
                 break;
 
             case $data === null:
-                self::serializeNull($includeType);
+                return Spec::AMF3_NULL;
                 break;
 
             case $data === true || $data === false:
-                self::serializeBoolean($data, $includeType);
+                return $data ? Spec::AMF3_TRUE : Spec::AMF3_FALSE;
                 break;
 
             case is_int($data):
-                self::serializeInt($data, $includeType);
+                if ($data < Spec::getMinInt() || $data > Spec::getMaxInt()) {
+                    return Spec::AMF3_DOUBLE;
+                }
+
+                return Spec::AMF3_INT;
                 break;
 
             case is_float($data):
-                self::serializeDouble($data, $includeType);
+                return Spec::AMF3_DOUBLE;
                 break;
 
             case is_string($data):
-                self::serializeString($data, $includeType);
-                break;
-
-            case ($data instanceof SimpleXMLElement):
-                throw new NotSupportedException('XML serialization is not supported');
+                return Spec::AMF3_STRING;
                 break;
 
             case ($data instanceof DateTime):
-                self::serializeDate($data, $includeType);
+                return Spec::AMF3_DATE;
                 break;
 
             case ($data instanceof ByteArray):
-                self::serializeByteArray($data, $includeType);
+                return Spec::AMF3_BYTE_ARRAY;
                 break;
 
             case is_array($data):
-                self::serializeArray($data, $includeType);
+                return Spec::AMF3_ARRAY;
                 break;
 
             case is_object($data):
-                self::serializeObject($data, $includeType);
+                return Spec::AMF3_OBJECT;
                 break;
 
             default:
-                throw new Exception('Unrecognized AMF type for data: ' . var_export($data));
+                return null;
+                break;
+        }
+    }
+
+    public function serialize($data, $includeType = true, $forceType = null)
+    {
+        $type = !empty($forceType) ? $forceType : $this->getDataType($data);
+
+        // add the AMF type marker for this data before the serialized data is added
+        if ($includeType) {
+            $this->stream->writeByte($type);
+        }
+
+        switch ($type) {
+            case Spec::AMF3_UNDEFINED:
+            case Spec::AMF3_NULL:
+            case Spec::AMF3_FALSE:
+            case Spec::AMF3_TRUE:
+                // no data is serialized except their type marker
+                break;
+
+            case Spec::AMF3_INT:
+                $this->serializeInt($data);
+                break;
+
+            case Spec::AMF3_DOUBLE:
+                $this->serializeDouble($data);
+                break;
+
+            case Spec::AMF3_STRING:
+                $this->serializeString($data);
+                break;
+
+            case Spec::AMF3_DATE:
+                $this->serializeDate($data);
+                break;
+
+            case Spec::AMF3_BYTE_ARRAY:
+                $this->serializeByteArray($data);
+                break;
+
+            case Spec::AMF3_ARRAY:
+                $this->serializeArray($data);
+                break;
+
+            case Spec::AMF3_OBJECT:
+                $this->serializeObject($data);
+                break;
+
+            default:
+                throw new Exception("Unrecognized AMF type [$type] for data: " . var_export($data));
                 break;
         }
 
-        return self::$packet;
+        return $this->stream;
     }
 
-    private static function serializeUndefined()
-    {
-        self::writeBytes(Spec::MARKER_UNDEFINED);
-    }
-
-    private static function serializeNull()
-    {
-        self::writeBytes(Spec::MARKER_NULL);
-    }
-
-    private static function serializeBoolean($value)
-    {
-        self::writeBytes($value === true ? Spec::MARKER_TRUE : Spec::MARKER_FALSE);
-    }
-
-    private static function serializeInt($value, $includeType = true)
+    private function serializeInt($value)
     {
         // AMF3 uses "Variable Length Unsigned 29-bit Integer Encoding"
         // ...depending on the length, we will add some flags or
         // serialize the number as a double
 
         if ($value < Spec::getMinInt() || $value > Spec::getMaxInt()) {
-            self::serializeDouble($value);
+            $this->serializeDouble($value);
             return;
         }
 
         $value &= Spec::getMaxInt();
 
-        if ($includeType) {
-            self::writeBytes(Spec::TYPE_INT);
-        }
-
         switch (true) {
             case $value < 0x80:
-                self::writeBytes($value);
+                $this->stream->writeBytes($value);
                 break;
             case $value < 0x4000:
-                self::writeBytes($value >> 7 & 0x7F | 0x80);
-                self::writeBytes($value & 0x7F);
+                $this->stream->writeBytes($value >> 7 & 0x7F | 0x80);
+                $this->stream->writeBytes($value & 0x7F);
                 break;
             case $value < 0x200000:
-                self::writeBytes($value >> 14 & 0x7F | 0x80);
-                self::writeBytes($value >> 7 & 0x7F | 0x80);
-                self::writeBytes($value & 0x7F);
+                $this->stream->writeBytes($value >> 14 & 0x7F | 0x80);
+                $this->stream->writeBytes($value >> 7 & 0x7F | 0x80);
+                $this->stream->writeBytes($value & 0x7F);
                 break;
             case $value < 0x40000000:
-                self::writeBytes($value >> 22 & 0x7F | 0x80);
-                self::writeBytes($value >> 15 & 0x7F | 0x80);
-                self::writeBytes($value >> 8 & 0x7F | 0x80);
-                self::writeBytes($value & 0xFF);
+                $this->stream->writeBytes($value >> 22 & 0x7F | 0x80);
+                $this->stream->writeBytes($value >> 15 & 0x7F | 0x80);
+                $this->stream->writeBytes($value >> 8 & 0x7F | 0x80);
+                $this->stream->writeBytes($value & 0xFF);
                 break;
             default:
                 throw new Exception(sprintf('Integer %d is out of range and cannot be serialized', $value));
@@ -130,128 +170,106 @@ class Serializer extends Base
         }
     }
 
-    private static function serializeDouble($value, $includeType = true)
+    private function serializeDouble($value)
     {
-        if ($includeType) {
-            self::writeBytes(Spec::TYPE_DOUBLE);
-        }
-
         $bin = pack("d", $value);
         if (Spec::isBigEndian()) {
             $bin = strrev($bin);
         }
 
-        self::writeBytes($bin, true);
+        $this->stream->writeRaw($bin);
     }
 
-    private static function serializeString($data, $includeType = true, $useRefs = true)
+    private function serializeString($data, $useRefs = true)
     {
-        if ($includeType) {
-            self::writeBytes(Spec::TYPE_STRING);
-        }
-
         if ($useRefs) {
-            $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_STRING);
+            $ref = $this->referenceStore->getReference($data, ReferenceStore::TYPE_STRING);
             if ($ref !== false) {
                 //use reference
-                self::serializeInt($ref << 1, false);
+                $this->serializeInt($ref << 1);
                 return;
             }
         }
 
-        self::serializeInt((strlen($data) << 1) | 1, false);
-        self::writeBytes($data, true);
+        $this->serializeInt((strlen($data) << 1) | 1);
+        $this->stream->writeRaw($data);
     }
 
-    private static function serializeDate(DateTime $data)
+    private function serializeDate(DateTime $data)
     {
         // @see http://php.net/manual/en/datetime.gettimestamp.php#98374
         // use the format() option rather than getTimestamp
         $millisSinceEpoch = $data->format('U') * 1000;
 
-        self::writeBytes(Spec::TYPE_DATE);
-        self::serializeInt($millisSinceEpoch);
+        $this->serialize($millisSinceEpoch, true, Spec::AMF3_INT);
     }
 
-    private static function serializeArray($data)
+    private function serializeArray($data)
     {
-        self::writeBytes(Spec::TYPE_ARRAY);
-
-        $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
+        $ref = $this->referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
         if ($ref !== false) {
             //use reference
-            self::serializeInt($ref << 1, false);
+            $this->serializeInt($ref << 1);
             return;
         }
 
         $isDense = Spec::isDenseArray($data);
         if ($isDense) {
-            self::serializeInt((count($data) << 1) | Spec::REFERENCE_BIT, false);
-            self::serializeString('', false);
+            $this->serializeInt((count($data) << 1) | Spec::REFERENCE_BIT);
+            $this->serializeString('');
 
             foreach ($data as $element) {
-                self::serialize($element);
+                $this->serialize($element);
             }
 
         } else {
-            self::serializeInt(1, false);
+            $this->serializeInt(1);
 
             foreach ($data as $key => $value) {
-                self::serializeString((string) $key, false, false);
-                self::serialize($value);
+                $this->serializeString((string) $key);
+                $this->serialize($value);
             }
 
-            self::serializeString('', false);
+            $this->serializeString('');
         }
     }
 
-    private static function serializeObject($data)
+    private function serializeObject($data)
     {
-        self::writeBytes(Spec::TYPE_OBJECT);
-
-        $ref = self::$referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
+        $ref = $this->referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
         if ($ref !== false) {
             //use reference
-            self::serializeInt($ref << 1, false);
+            $this->serializeInt($ref << 1);
             return;
         }
 
-        // Get the accessible non-static properties of the given object according to scope
+        // Get the accessible non-properties of the given object according to scope
         $properties = $data instanceof ISerializable ? $data->export() : get_object_vars($data);
 
         // write object info & class name
-        self::serializeInt(0b1011, false);
-        self::serializeString(self::getObjectClassname($data), false, false);
+        $this->serializeInt(0b1011);
+        $this->serializeString($this->getObjectClassname($data), false);
 
         // write keys
         if (count($properties)) {
             foreach ($properties as $key => $value) {
-                self::serializeString($key, false, false);
-                self::serialize($value);
+                $this->serializeString($key, false);
+                $this->serialize($value);
             }
         }
 
         // close
-        self::serializeInt(Spec::REFERENCE_BIT, false);
+        $this->serializeInt(Spec::REFERENCE_BIT);
     }
 
-    private static function serializeByteArray($data, $includeType = true)
+    private function serializeByteArray($data)
     {
-        if ($includeType) {
-            self::writeBytes(Spec::TYPE_BYTE_ARRAY);
-        }
-
         if (!$data instanceof ByteArray) {
             throw new SerializationException('Invalid ByteArray data provided');
         }
 
-        self::serializeInt(strlen($data->getData()) << 1 | Spec::REFERENCE_BIT, false);
-        self::writeBytes($data->getData(), true);
-    }
-
-    private static function writeBytes($bytes, $raw = false)
-    {
-        self::$packet .= $raw ? $bytes : pack('c', $bytes);
+        $this->serializeInt(strlen($data->getData()) << 1 | Spec::REFERENCE_BIT);
+        $this->stream->writeRaw($data->getData());
     }
 
     /**
@@ -261,7 +279,7 @@ class Serializer extends Base
      *
      * @return null|string
      */
-    private static function getObjectClassname($object)
+    private function getObjectClassname($object)
     {
         if (!is_object($object)) {
             return null;

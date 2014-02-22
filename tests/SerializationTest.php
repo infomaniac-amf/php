@@ -14,18 +14,18 @@ class SerializationTest extends PHPUnit_Framework_TestCase
 {
     public function testSerializeUndefined()
     {
-        $this->assertEquals(Spec::MARKER_UNDEFINED, bin2hex(AMF::serialize(new Undefined())));
+        $this->assertEquals(Spec::AMF3_UNDEFINED, bin2hex(AMF::serialize(new Undefined())));
     }
 
     public function testSerializeNull()
     {
-        $this->assertEquals(Spec::MARKER_NULL, bin2hex(AMF::serialize(null)));
+        $this->assertEquals(Spec::AMF3_NULL, bin2hex(AMF::serialize(null)));
     }
 
     public function testSerializeBoolean()
     {
-        $this->assertEquals(Spec::MARKER_TRUE, bin2hex(AMF::serialize(true)));
-        $this->assertEquals(Spec::MARKER_FALSE, bin2hex(AMF::serialize(false)));
+        $this->assertEquals(Spec::AMF3_TRUE, bin2hex(AMF::serialize(true)));
+        $this->assertEquals(Spec::AMF3_FALSE, bin2hex(AMF::serialize(false)));
     }
 
     public function testSerializeInt()

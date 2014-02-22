@@ -9,33 +9,32 @@ class Spec
     /**
      * Markers represent a type AND its value
      */
-    const MARKER_UNDEFINED = 0x00;
-    const MARKER_NULL      = 0x01;
-    const MARKER_FALSE     = 0x02;
-    const MARKER_TRUE      = 0x03;
+    const AMF3_UNDEFINED   = 0x00;
+    const AMF3_NULL        = 0x01;
+    const AMF3_FALSE       = 0x02;
+    const AMF3_TRUE        = 0x03;
 
     /**
      * Types represent their proceeding value
      */
-    const TYPE_INT           = 0x04;
-    const TYPE_DOUBLE        = 0x05;
-    const TYPE_STRING        = 0x06;
-    const TYPE_XML_DOC       = 0x07;    // not supported
-    const TYPE_DATE          = 0x08;
-    const TYPE_ARRAY         = 0x09;
-    const TYPE_OBJECT        = 0x0A;
-    const TYPE_XML           = 0x0B;    // not supported
-    const TYPE_BYTE_ARRAY    = 0x0C;
-    const TYPE_VECTOR_INT    = 0x0D;
-    const TYPE_VECTOR_UINT   = 0x0E;
-    const TYPE_VECTOR_DOUBLE = 0x0F;
-    const TYPE_VECTOR_OBJECT = 0x10;
-    const TYPE_DICTIONARY    = 0x11;
+    const AMF3_INT           = 0x04;
+    const AMF3_DOUBLE        = 0x05;
+    const AMF3_STRING        = 0x06;
+    const AMF3_XML_DOC       = 0x07;    // not supported
+    const AMF3_DATE          = 0x08;
+    const AMF3_ARRAY         = 0x09;
+    const AMF3_OBJECT        = 0x0A;
+    const AMF3_XML           = 0x0B;    // not supported
+    const AMF3_BYTE_ARRAY    = 0x0C;
+    const AMF3_VECTOR_INT    = 0x0D;    // not supported
+    const AMF3_VECTOR_UINT   = 0x0E;    // not supported
+    const AMF3_VECTOR_DOUBLE = 0x0F;    // not supported
+    const AMF3_VECTOR_OBJECT = 0x10;    // not supported
+    const AMF3_DICTIONARY    = 0x11;    // not supported
 
-    const OBJECT_DYNAMIC        = 0x00;
-    const OBJECT_EXTERNALIZABLE = 0x01;
+    const OBJECT_DYNAMIC     = 0x00;
 
-    const REFERENCE_BIT = 0x01;
+    const REFERENCE_BIT      = 0x01;
 
     public static function getMaxInt()
     {
