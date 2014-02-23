@@ -67,13 +67,7 @@ class ReferenceStore
             return false;
         }
 
-        foreach ($this->store[$type] as $ref) {
-            if ($ref == $reference) {
-                return $this->store[$type][$ref];
-            }
-        }
-
-        return false;
+        return $this->store[$type][$reference];
     }
 
     /**
@@ -84,13 +78,13 @@ class ReferenceStore
      *
      * @return bool
      */
-    public function addReference($data, $type)
+    public function addReference(&$data, $type)
     {
         if (!$this->validate($data, $type)) {
             return false;
         }
 
-        $this->store[$type][] = $data;
+        $this->store[$type][] =& $data;
         return $data;
     }
 
