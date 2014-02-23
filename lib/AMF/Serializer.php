@@ -14,69 +14,14 @@ use Infomaniac\Util\ReferenceStore;
  */
 class Serializer extends Base
 {
+    /**
+     * @var \Infomaniac\IO\Output
+     */
+    protected $stream;
+
     public function __construct(Output $stream)
     {
         parent::__construct($stream);
-    }
-
-    /**
-     * Return the AMF3 data type for given data
-     *
-     * @param $data
-     *
-     * @return int|null
-     */
-    private function getDataType($data)
-    {
-        switch (true) {
-            case $data instanceof Undefined:
-                return Spec::AMF3_UNDEFINED;
-                break;
-
-            case $data === null:
-                return Spec::AMF3_NULL;
-                break;
-
-            case $data === true || $data === false:
-                return $data ? Spec::AMF3_TRUE : Spec::AMF3_FALSE;
-                break;
-
-            case is_int($data):
-                if ($data < Spec::getMinInt() || $data > Spec::getMaxInt()) {
-                    return Spec::AMF3_DOUBLE;
-                }
-
-                return Spec::AMF3_INT;
-                break;
-
-            case is_float($data):
-                return Spec::AMF3_DOUBLE;
-                break;
-
-            case is_string($data):
-                return Spec::AMF3_STRING;
-                break;
-
-            case ($data instanceof DateTime):
-                return Spec::AMF3_DATE;
-                break;
-
-            case ($data instanceof ByteArray):
-                return Spec::AMF3_BYTE_ARRAY;
-                break;
-
-            case is_array($data):
-                return Spec::AMF3_ARRAY;
-                break;
-
-            case is_object($data):
-                return Spec::AMF3_OBJECT;
-                break;
-
-            default:
-                return null;
-                break;
-        }
     }
 
     public function serialize($data, $includeType = true, $forceType = null)
@@ -134,39 +79,24 @@ class Serializer extends Base
 
     private function serializeInt($value)
     {
-        // AMF3 uses "Variable Length Unsigned 29-bit Integer Encoding"
-        // ...depending on the length, we will add some flags or
-        // serialize the number as a double
-
         if ($value < Spec::getMinInt() || $value > Spec::getMaxInt()) {
-            $this->serializeDouble($value);
-            return;
+            throw new SerializationException('Integer out of range: ' . $value);
         }
 
-        $value &= Spec::getMaxInt();
-
-        switch (true) {
-            case $value < 0x80:
-                $this->stream->writeBytes($value);
-                break;
-            case $value < 0x4000:
-                $this->stream->writeBytes($value >> 7 & 0x7F | 0x80);
-                $this->stream->writeBytes($value & 0x7F);
-                break;
-            case $value < 0x200000:
-                $this->stream->writeBytes($value >> 14 & 0x7F | 0x80);
-                $this->stream->writeBytes($value >> 7 & 0x7F | 0x80);
-                $this->stream->writeBytes($value & 0x7F);
-                break;
-            case $value < 0x40000000:
-                $this->stream->writeBytes($value >> 22 & 0x7F | 0x80);
-                $this->stream->writeBytes($value >> 15 & 0x7F | 0x80);
-                $this->stream->writeBytes($value >> 8 & 0x7F | 0x80);
-                $this->stream->writeBytes($value & 0xFF);
-                break;
-            default:
-                throw new Exception(sprintf('Integer %d is out of range and cannot be serialized', $value));
-                break;
+        if ($value < 0 || $value >= Spec::MIN_4_BYTE_INT) {
+            $this->stream->writeByte(($value >> 22) | 0x80);
+            $this->stream->writeByte(($value >> 15) | 0x80);
+            $this->stream->writeByte(($value >> 8) | 0x80);
+            $this->stream->writeByte($value);
+        } elseif ($value >= Spec::MIN_3_BYTE_INT) {
+            $this->stream->writeByte(($value >> 14) | 0x80);
+            $this->stream->writeByte(($value >> 7) | 0x80);
+            $this->stream->writeByte($value & 0x7f);
+        } elseif ($value >= Spec::MIN_2_BYTE_INT) {
+            $this->stream->writeByte(($value >> 7) | 0x80);
+            $this->stream->writeByte($value & 0x7f);
+        } else {
+            $this->stream->writeByte($value);
         }
     }
 
@@ -197,11 +127,18 @@ class Serializer extends Base
 
     private function serializeDate(DateTime $data)
     {
+        $ref = $this->referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
+        if ($ref !== false) {
+            //use reference
+            $this->serializeInt($ref << 1);
+            return;
+        }
+
         // @see http://php.net/manual/en/datetime.gettimestamp.php#98374
         // use the format() option rather than getTimestamp
         $millisSinceEpoch = $data->format('U') * 1000;
 
-        $this->serialize($millisSinceEpoch, true, Spec::AMF3_INT);
+        $this->serialize($millisSinceEpoch, true, Spec::AMF3_DOUBLE);
     }
 
     private function serializeArray($data)
@@ -226,7 +163,7 @@ class Serializer extends Base
             $this->serializeInt(1);
 
             foreach ($data as $key => $value) {
-                $this->serializeString((string) $key);
+                $this->serializeString((string) $key, false);
                 $this->serialize($value);
             }
 
@@ -266,6 +203,13 @@ class Serializer extends Base
     {
         if (!$data instanceof ByteArray) {
             throw new SerializationException('Invalid ByteArray data provided');
+        }
+
+        $ref = $this->referenceStore->getReference($data, ReferenceStore::TYPE_OBJECT);
+        if ($ref !== false) {
+            //use reference
+            $this->serializeInt($ref << 1);
+            return;
         }
 
         $this->serializeInt(strlen($data->getData()) << 1 | Spec::REFERENCE_BIT);

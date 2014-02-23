@@ -8,9 +8,9 @@ abstract class Stream
 {
     protected $raw;
 
-    public function __construct()
+    public function __construct($raw = '')
     {
-        $this->raw = '';
+        $this->raw = $raw;
     }
 
     /**

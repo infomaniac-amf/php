@@ -6,6 +6,7 @@ use Infomaniac\Exception\SerializationException;
 use ErrorException;
 use Exception;
 use Infomaniac\AMF\Serializer;
+use Infomaniac\IO\Input;
 use Infomaniac\IO\Output;
 
 /**
@@ -23,7 +24,7 @@ class AMF
         }
     }
 
-    public static function serialize($data)
+    public static function serialize($data, $type = null)
     {
         try {
             self::init();
@@ -31,7 +32,7 @@ class AMF
             $stream = new Output();
             $serializer = new Serializer($stream);
 
-            return $serializer->serialize($data);
+            return $serializer->serialize($data, true, $type);
         } catch (Exception $e) {
             $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
             $ex->setData($data);
@@ -44,7 +45,10 @@ class AMF
         try {
             self::init();
 
-            return Deserializer::deserialize($data);
+            $stream = new Input($data);
+            $deserializer = new Deserializer($stream);
+
+            return $deserializer->deserialize();
         } catch (Exception $e) {
             $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
             $ex->setData($data);

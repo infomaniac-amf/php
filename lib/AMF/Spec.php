@@ -36,6 +36,10 @@ class Spec
 
     const REFERENCE_BIT      = 0x01;
 
+    const MIN_2_BYTE_INT     = 0x80;
+    const MIN_3_BYTE_INT     = 0x4000;
+    const MIN_4_BYTE_INT     = 0x200000;
+
     public static function getMaxInt()
     {
         return pow(2, 28) - 1;
