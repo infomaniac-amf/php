@@ -75,7 +75,14 @@ class SerializationTest extends PHPUnit_Framework_TestCase
     public function testSerializeArray()
     {
         $ref     = ['1' => 1, '4' => 'Hello!'];
-        $samples = [['a' => 'b'], [], ['ref' => $ref, 'hi', 'another' => $ref], [1, 2, 3, 4], [5, 9, 10, '11' => 14]];
+        $samples = array(
+            ['a' => 'b'],
+            [],
+            ['ref' => $ref, 'hi', 'a' => 'reused key', 'another' => $ref],
+            ['ref' => $ref, 'another' => $ref],
+            [1, 2, 3, 4],
+            [5, 9, 10, '11' => 14]
+        );
 
         foreach ($samples as $sample) {
             $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_ARRAY)));
@@ -89,6 +96,7 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $dyn->a = 'b';
         $dyn->b = array('123');
         $dyn->c = new Undefined();
+        $dyn->d = new stdClass();
 
         $this->assertEquals($dyn, AMF::deserialize(AMF::serialize($dyn)));
 
