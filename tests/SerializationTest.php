@@ -14,18 +14,18 @@ class SerializationTest extends PHPUnit_Framework_TestCase
 {
     public function testSerializeUndefined()
     {
-        $this->assertSame(Spec::AMF3_UNDEFINED, AMF::deserialize(AMF::serialize(new Undefined())));
+        $this->assertEquals(new Undefined(), AMF::deserialize(AMF::serialize(new Undefined())));
     }
 
     public function testSerializeNull()
     {
-        $this->assertSame(Spec::AMF3_NULL, AMF::deserialize(AMF::serialize(null)));
+        $this->assertSame(null, AMF::deserialize(AMF::serialize(null)));
     }
 
     public function testSerializeBoolean()
     {
-        $this->assertSame(Spec::AMF3_FALSE, AMF::deserialize(AMF::serialize(false)));
-        $this->assertSame(Spec::AMF3_TRUE, AMF::deserialize(AMF::serialize(true)));
+        $this->assertSame(false, AMF::deserialize(AMF::serialize(false)));
+        $this->assertSame(true, AMF::deserialize(AMF::serialize(true)));
     }
 
     public function testSerializeInt()
@@ -46,6 +46,15 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    public function testSerializeString()
+    {
+        $samples = ['hello', '.', file_get_contents(__FILE__), 'ünicødé'];
+
+        foreach ($samples as $sample) {
+            $this->assertSame($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_STRING)));
+        }
+    }
+
     public function testSerializeDate()
     {
         $samples = [
@@ -63,52 +72,66 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         }
     }
 
-    public function testSerializeString()
+    public function testSerializeArray()
     {
-        $samples = ['hello', '.', file_get_contents(__FILE__), 'ünicødé'];
+        $ref     = ['1' => 1, '4' => 'Hello!'];
+        $samples = [['a' => 'b'], [], ['ref' => $ref, 'hi', 'another' => $ref], [1, 2, 3, 4], [5, 9, 10, '11' => 14]];
 
         foreach ($samples as $sample) {
-            $this->assertSame($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_STRING)));
+            $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_ARRAY)));
         }
     }
 
     public function testSerializeObject()
     {
         // dynamic object
-        $dyn = new stdClass();
+        $dyn    = new stdClass();
         $dyn->a = 'b';
         $dyn->b = array('123');
+        $dyn->c = new Undefined();
 
-        $this->assertEquals('0a0b0103610603620362090301060731323301', bin2hex(AMF::serialize($dyn)));
+        $this->assertEquals($dyn, AMF::deserialize(AMF::serialize($dyn)));
+
+        // typed object
+        $typed           = new NormalClass();
+        $typed->property = 'value';
+        $this->assertEquals($typed, AMF::deserialize(AMF::serialize($typed)));
 
         // serializable
         $serializable = new SerializableData();
         $serializable->setName('Test');
 
-        $this->assertEquals('0a0b2153657269616c697a61626c6544617461096e616d6506095465737411726576657273656406097473655401',
-            bin2hex(AMF::serialize($serializable))
-        );
+        $this->assertEquals($serializable, AMF::deserialize(AMF::serialize($serializable)));
 
-        // object with no properties
-        $null = new stdClass();
-        $this->assertEquals('0a0b0101', bin2hex(AMF::serialize($null)));
+        // reference
+        $a    = new stdClass();
+        $a->x = 'y';
+
+        $b           = new NormalClass();
+        $b->property = 'abc';
+
+        $a->normal = $b;
+        $this->assertEquals($a, AMF::deserialize(AMF::serialize($a)));
+
+        // self-reference
+        $a       = new stdClass();
+        $a->x    = 'y';
+        $a->self = $a;
+        $this->assertEquals($a, AMF::deserialize(AMF::serialize($a)));
     }
 
     public function testSerializeBytes()
     {
-        $bytes = new ByteArray('A');
-        $this->assertEquals('0c0341', bin2hex(AMF::serialize($bytes)));
+        $samples = [
+            new ByteArray('A'),
+            new ByteArray('$1ï¿½2'),
+            new ByteArray(0b11000011101010),
+            new ByteArray(file_get_contents(__DIR__ . '/php.ico'))
+        ];
 
-        $bytes = new ByteArray('$1ï¿½2');
-        $this->assertEquals('0c132431c3afc2bfc2bd32', bin2hex(AMF::serialize($bytes)));
-
-        $bytes = new ByteArray(0b11000011101010); // 12522
-        $this->assertEquals('0c0b3132353232', bin2hex(AMF::serialize($bytes)));
-
-        $bytes = new ByteArray(file_get_contents(__DIR__ . '/php.ico'));
-        $this->assertEquals('0c8c6d424d360300000000000036000000280000001000000010000000010018000000000000030000c40e0000c40e00000000000000000000c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080c08080c08080c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080d7d7d7000000d7d7d7c08080c08080c08080c08080c08080c08080c08080d7d7d7000000d7d7d7c08080c08080c08080d7d7d7000000d7d7d7d7d7d7c08080c08080d7d7d7c08080c08080d7d7d7d7d7d7000000d7d7d7d7d7d7c08080c08080d7d7d7000000000000000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000000000000000d7d7d7d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7000000d7d7d7d7d7d7000000d7d7d7d7d7d7000000000000000000d7d7d7d7d7d7000000000000000000d7d7d7d7d7d7000000000000000000d7d7d7d7d7d7c08080d7d7d7d7d7d7d7d7d7c08080d7d7d7000000d7d7d7d7d7d7c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080c08080c08080c08080c08080d7d7d7000000d7d7d7c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080d7d7d7d7d7d7d7d7d7c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080c08080',
-            bin2hex(AMF::serialize($bytes))
-        );
+        foreach ($samples as $sample) {
+            $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_BYTE_ARRAY)));
+        }
     }
 }
 
@@ -153,4 +176,10 @@ class SerializableData implements ISerializable
             $this->setName($data['name']);
         }
     }
+}
+
+class NormalClass
+{
+    public $property;
+    public $another = false;
 }

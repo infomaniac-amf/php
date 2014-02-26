@@ -180,7 +180,6 @@ class Serializer extends Base
             return;
         }
 
-        // Get the accessible non-properties of the given object according to scope
         $properties = $data instanceof ISerializable ? $data->export() : get_object_vars($data);
 
         // write object info & class name
@@ -196,7 +195,7 @@ class Serializer extends Base
         }
 
         // close
-        $this->serializeInt(Spec::REFERENCE_BIT);
+        $this->serializeString('');
     }
 
     private function serializeByteArray($data)
@@ -212,7 +211,10 @@ class Serializer extends Base
             return;
         }
 
+        // write length
         $this->serializeInt(strlen($data->getData()) << 1 | Spec::REFERENCE_BIT);
+
+        // write raw bytes
         $this->stream->writeRaw($data->getData());
     }
 

@@ -1,10 +1,16 @@
 <?php
 namespace Infomaniac\AMF;
 
+use ArrayObject;
 use DateTime;
+use Exception;
 use Infomaniac\Exception\DeserializationException;
 use Infomaniac\IO\Input;
+use Infomaniac\Type\ByteArray;
+use Infomaniac\Type\Undefined;
 use Infomaniac\Util\ReferenceStore;
+use ReflectionClass;
+use stdClass;
 
 /**
  * @author Danny Kopping <dannykopping@gmail.com>
@@ -21,17 +27,22 @@ class Deserializer extends Base
         parent::__construct($stream);
     }
 
-    public function deserialize()
+    public function deserialize($forceType = null)
     {
-        $type = $this->stream->readByte();
+        $type = empty($forceType) ? $this->stream->readByte() : $forceType;
 
         switch ($type) {
             case Spec::AMF3_UNDEFINED:
+                return new Undefined();
+                break;
             case Spec::AMF3_NULL:
+                return null;
+                break;
             case Spec::AMF3_FALSE:
+                return false;
+                break;
             case Spec::AMF3_TRUE:
-                // the data type is the value for these simple types
-                return $type;
+                return true;
                 break;
             case Spec::AMF3_INT:
                 return $this->deserializeInt();
@@ -45,8 +56,17 @@ class Deserializer extends Base
             case Spec::AMF3_DATE:
                 return $this->deserializeDate();
                 break;
+            case Spec::AMF3_ARRAY:
+                return $this->deserializeArray();
+                break;
+            case Spec::AMF3_OBJECT:
+                return $this->deserializeObject();
+                break;
+            case Spec::AMF3_BYTE_ARRAY:
+                return $this->deserializeByteArray();
+                break;
             default:
-                die("oh noes!");
+                throw new DeserializationException('Cannot deserialize type: ' . $type);
                 break;
         }
     }
@@ -103,13 +123,13 @@ class Deserializer extends Base
     {
         $reference = $this->deserializeInt();
 
-        if ($reference & Spec::REFERENCE_BIT == 0) {
+        if (($reference & Spec::REFERENCE_BIT) == 0) {
             $reference >>= Spec::REFERENCE_BIT;
 
             return $this->referenceStore->getByReference($reference, ReferenceStore::TYPE_STRING);
         }
 
-        $length = $reference << Spec::REFERENCE_BIT | 1;
+        $length = $reference >> Spec::REFERENCE_BIT;
         $string = $this->stream->readRawBytes($length);
         $this->referenceStore->addReference($string, ReferenceStore::TYPE_STRING);
 
@@ -120,17 +140,122 @@ class Deserializer extends Base
     {
         $reference = $this->deserializeInt();
 
-        if ($reference & Spec::REFERENCE_BIT == 0) {
+        if (($reference & Spec::REFERENCE_BIT) == 0) {
             $reference >>= Spec::REFERENCE_BIT;
 
             return $this->referenceStore->getByReference($reference, ReferenceStore::TYPE_OBJECT);
         }
 
         $timestamp = $this->stream->readDouble() / 1000;
-        $date = new DateTime("@$timestamp");
+        $date      = new DateTime("@$timestamp");
 
         $this->referenceStore->addReference($date, ReferenceStore::TYPE_OBJECT);
 
         return $date;
+    }
+
+    private function deserializeArray()
+    {
+        $reference = $this->deserializeInt();
+
+        if (($reference & Spec::REFERENCE_BIT) == 0) {
+            $reference >>= Spec::REFERENCE_BIT;
+
+            return $this->referenceStore->getByReference($reference, ReferenceStore::TYPE_OBJECT);
+        }
+
+        $size = $reference >> Spec::REFERENCE_BIT;
+
+        $arr = array();
+        $this->referenceStore->addReference($arr, ReferenceStore::TYPE_OBJECT);
+
+        $key = $this->deserializeString();
+        while (strlen($key) > 0) {
+            $arr[$key] = $this->deserialize();
+            $key       = $this->deserializeString();
+        }
+
+        for ($i = 0; $i < $size; $i++) {
+            $arr[] = $this->deserialize();
+        }
+
+        return $arr;
+    }
+
+    private function deserializeObject()
+    {
+        $reference = $this->deserializeInt();
+        if (($reference & Spec::REFERENCE_BIT) == 0) {
+            $reference >>= Spec::REFERENCE_BIT;
+
+            return $this->referenceStore->getByReference($reference, ReferenceStore::TYPE_OBJECT);
+        }
+
+        $class    = $this->deserializeString();
+        $instance = $this->createClassInstance($class);
+
+        // add a new reference at this stage - essential to handle self-referencing objects
+        $this->referenceStore->addReference($instance, ReferenceStore::TYPE_OBJECT);
+
+        // collect all properties into hash
+        $data = array();
+        while (strlen($property = $this->deserializeString()) > 0) {
+            $data[$property] = $this->deserialize();
+        }
+
+        if ($instance instanceof ISerializable) {
+            $instance->import($data);
+        } else {
+            // assign all properties to class if property is public
+            try {
+                foreach ($data as $property => $val) {
+                    $instance->$property = $val;
+                }
+            } catch (Exception $e) {
+                throw new DeserializationException("Property [$property] cannot be set on class [$class]");
+            }
+        }
+
+        return $instance;
+    }
+
+    private function deserializeByteArray()
+    {
+        $reference = $this->deserializeInt();
+        if (($reference & Spec::REFERENCE_BIT) == 0) {
+            $reference >>= Spec::REFERENCE_BIT;
+
+            return $this->referenceStore->getByReference($reference, ReferenceStore::TYPE_OBJECT);
+        }
+
+        $length = $reference >> Spec::REFERENCE_BIT;
+        $bytes = $this->stream->readRawBytes($length);
+
+        $instance = new ByteArray($bytes);
+        return $instance;
+
+    }
+
+    /**
+     * Create an instance of a given class
+     * Use stdClass if no class name is provided
+     *
+     * @param $className
+     *
+     * @throws \Infomaniac\Exception\DeserializationException
+     * @return object|stdClass
+     */
+    private function createClassInstance($className)
+    {
+        if (empty($className)) {
+            return new stdClass();
+        }
+
+        try {
+            $refClass = new ReflectionClass($className);
+            return $refClass->newInstance();
+        } catch (Exception $e) {
+            throw new DeserializationException("Class [$className] could not be instantiated");
+        }
     }
 } 

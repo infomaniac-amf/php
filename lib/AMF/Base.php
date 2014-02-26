@@ -24,8 +24,8 @@ abstract class Base
 
     public function __construct(Stream $stream)
     {
-        $this->stream         = $stream;
-        $this->referenceStore = new ReferenceStore();
+        $this->stream           = $stream;
+        $this->referenceStore   = new ReferenceStore();
     }
 
     /**

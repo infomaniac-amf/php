@@ -60,7 +60,7 @@ class ReferenceStore
         $count = count($this->store[$type]);
 
         if ($reference >= $count) {
-            throw new DeserializationException('Invalid string reference: ' . $reference);
+            throw new DeserializationException('Invalid ' . $type . ' reference: ' . $reference);
         }
 
         if (!$count) {
