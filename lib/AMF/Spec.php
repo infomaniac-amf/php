@@ -40,15 +40,8 @@ class Spec
     const MIN_3_BYTE_INT     = 0x4000;
     const MIN_4_BYTE_INT     = 0x200000;
 
-    public static function getMaxInt()
-    {
-        return pow(2, 28) - 1;
-    }
-
-    public static function getMinInt()
-    {
-        return pow(-2, 29);
-    }
+    const MAX_INT            = 0xFFFFFFF;       // pow(2 ^ 28) - 1
+    const MIN_INT            = -0x20000000;     // pow(-2 ^ 29)
 
     /**
      * @link http://stackoverflow.com/a/9745170

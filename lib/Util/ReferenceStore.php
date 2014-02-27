@@ -16,7 +16,7 @@ class ReferenceStore
 
     public function __construct()
     {
-        $this->store = array();
+        $this->store = array(self::TYPE_OBJECT => [], self::TYPE_STRING => []);
     }
 
     /**
@@ -29,13 +29,13 @@ class ReferenceStore
      */
     public function getReference($data, $type)
     {
-        if (!$this->validate($data, $type)) {
-            return false;
-        }
-
         $index = array_search($data, $this->store[$type], true);
         if ($index !== false) {
             return $index;
+        }
+
+        if (!$this->validate($data)) {
+            return false;
         }
 
         $this->addReference($data, $type);
@@ -80,7 +80,7 @@ class ReferenceStore
      */
     public function addReference(&$data, $type)
     {
-        if (!$this->validate($data, $type)) {
+        if (!$this->validate($data)) {
             return false;
         }
 
@@ -93,20 +93,11 @@ class ReferenceStore
      * and prepares array for possible reference addition
      *
      * @param $data
-     * @param $type
      *
      * @return bool
      */
-    private function validate($data, $type)
+    private function validate($data)
     {
-        if (empty($this->store)) {
-            $this->store = array();
-        }
-
-        if (!isset($this->store[$type])) {
-            $this->store[$type] = [];
-        }
-
         // null or zero-length values cannot be assigned references
         if (is_null($data) || (is_string($data) && !strlen($data))) {
             return false;

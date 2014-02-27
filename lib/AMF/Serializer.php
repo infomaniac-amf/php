@@ -79,7 +79,7 @@ class Serializer extends Base
 
     private function serializeInt($value)
     {
-        if ($value < Spec::getMinInt() || $value > Spec::getMaxInt()) {
+        if ($value < Spec::MIN_INT || $value > Spec::MAX_INT) {
             throw new SerializationException('Integer out of range: ' . $value);
         }
 
@@ -183,7 +183,7 @@ class Serializer extends Base
         $properties = $data instanceof ISerializable ? $data->export() : get_object_vars($data);
 
         // write object info & class name
-        $this->serializeInt(0b1011);
+        $this->serializeInt(11);
         $this->serializeString($this->getObjectClassname($data), false);
 
         // write keys

@@ -70,7 +70,7 @@ abstract class Base
                 // AMF3 uses "Variable Length Unsigned 29-bit Integer Encoding"
                 // ...depending on the size, we will either deserialize it as an integer or a float
 
-                if ($data < Spec::getMinInt() || $data > Spec::getMaxInt()) {
+                if ($data < Spec::MIN_INT || $data > Spec::MAX_INT) {
                     return Spec::AMF3_DOUBLE;
                 }
 
