@@ -41,7 +41,7 @@ class Input extends Stream
     {
         $double = $this->readRawBytes(8);
 
-        if (Spec::isBigEndian()) {
+        if (Spec::isLittleEndian()) {
             $double = strrev($double);
         }
 

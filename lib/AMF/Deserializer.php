@@ -111,7 +111,7 @@ class Deserializer extends Base
     private function deserializeDouble()
     {
         $double = $this->stream->readRawBytes(8, true);
-        if (Spec::isBigEndian()) {
+        if (Spec::isLittleEndian()) {
             $double = strrev($double);
         }
 

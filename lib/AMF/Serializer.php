@@ -103,7 +103,7 @@ class Serializer extends Base
     private function serializeDouble($value)
     {
         $bin = pack("d", $value);
-        if (Spec::isBigEndian()) {
+        if (Spec::isLittleEndian()) {
             $bin = strrev($bin);
         }
 
@@ -138,6 +138,7 @@ class Serializer extends Base
         // use the format() option rather than getTimestamp
         $millisSinceEpoch = $data->format('U') * 1000;
 
+//        var_dump($data->format('Y-m-d'), $millisSinceEpoch); die();
         $this->serialize($millisSinceEpoch, true, Spec::AMF3_DOUBLE);
     }
 

@@ -46,10 +46,11 @@ class Spec
     /**
      * @link http://stackoverflow.com/a/9745170
      */
-    public static function isBigEndian()
+    public static function isLittleEndian()
     {
-        $test = unpack("C*", pack("S*", 256));
-        return !$test[1] == 1;
+        $testint = 0x00FF;
+        $p       = pack('S', $testint);
+        return $testint === current(unpack('v', $p));
     }
 
     /**
