@@ -40,7 +40,7 @@ class AMF
         }
     }
 
-    public static function deserialize($data)
+    public static function deserialize($data, $forceType = null)
     {
         try {
             self::init();
@@ -48,7 +48,7 @@ class AMF
             $stream = new Input($data);
             $deserializer = new Deserializer($stream);
 
-            return $deserializer->deserialize();
+            return $deserializer->deserialize($forceType);
         } catch (Exception $e) {
             $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
             $ex->setData($data);

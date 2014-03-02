@@ -29,7 +29,9 @@ class Deserializer extends Base
 
     public function deserialize($forceType = null)
     {
-        $type = empty($forceType) ? $this->stream->readByte() : $forceType;
+        // regardless of the type being forced, we need to read the first byte
+        $type = $this->stream->readByte();
+        $type = empty($forceType) ? $type : $forceType;
 
         switch ($type) {
             case Spec::AMF3_UNDEFINED:
