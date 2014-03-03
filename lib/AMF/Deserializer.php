@@ -75,39 +75,28 @@ class Deserializer extends Base
 
     private function deserializeInt()
     {
-        $count = 1;
-        $int   = 0;
+        $result = 0;
 
-        $byte = $this->stream->readByte();
-
-        while ((($byte & 0x80) != 0) && $count < 4) {
-            $int <<= 7;
-            $int |= ($byte & 0x7F);
-            $byte = $this->stream->readByte();
-            $count++;
+        $n = 0;
+        $b = $this->stream->readByte();
+        while (($b & 0x80) != 0 && $n < 3) {
+            $result <<= 7;
+            $result |= ($b & 0x7F);
+            $b = $this->stream->readByte();
+            $n++;
         }
-
-        if ($count < 4) {
-            $int <<= 7;
-            $int |= $byte;
+        if ($n < 3) {
+            $result <<= 7;
+            $result |= $b;
         } else {
-            // Use all 8 bits from the 4th byte
-            $int <<= 8;
-            $int |= $byte;
-        }
-
-        if (($int & 0x18000000) == 0x18000000) {
-            $int ^= 0x1fffffff;
-            $int *= -1;
-            $int -= 1;
-        } else {
-            if (($int & 0x10000000) == 0x10000000) {
-                // remove the signed flag
-                $int &= 0x0fffffff;
+            $result <<= 8;
+            $result |= $b;
+            if (($result & 0x10000000) != 0) {
+                $result |= Spec::MIN_INT;
             }
         }
 
-        return $int;
+        return $result;
     }
 
     private function deserializeDouble()
@@ -231,7 +220,7 @@ class Deserializer extends Base
         }
 
         $length = $reference >> Spec::REFERENCE_BIT;
-        $bytes = $this->stream->readRawBytes($length);
+        $bytes  = $this->stream->readRawBytes($length);
 
         $instance = new ByteArray($bytes);
         return $instance;

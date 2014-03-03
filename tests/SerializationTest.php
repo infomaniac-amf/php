@@ -30,7 +30,7 @@ class SerializationTest extends PHPUnit_Framework_TestCase
 
     public function testSerializeInt()
     {
-        $samples = [1, 13, 1398693, 100000000, 12345013, 9876543, Spec::MAX_INT - 1, -123, -9999999];
+        $samples = [1, 13, 1398693, 100000000, 12345013, 9876543, Spec::MAX_INT, -123, -9999999, Spec::MIN_INT];
 
         foreach ($samples as $sample) {
             $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_INT)));
