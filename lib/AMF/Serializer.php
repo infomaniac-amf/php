@@ -213,7 +213,7 @@ class Serializer extends Base
         }
 
         // write length
-        $this->serializeInt(strlen($data->getData()) << 1 | Spec::REFERENCE_BIT);
+        $this->serializeInt((strlen($data->getData()) << 1) | Spec::REFERENCE_BIT);
 
         // write raw bytes
         $this->stream->writeRaw($data->getData());
@@ -233,6 +233,6 @@ class Serializer extends Base
         }
 
         $className = get_class($object);
-        return $className == 'stdClass' ? null : $className;
+        return $className == 'stdClass' ? '' : $className;
     }
 } 
