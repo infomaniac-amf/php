@@ -137,7 +137,7 @@ class Deserializer extends Base
             return $this->referenceStore->getByReference($reference, ReferenceStore::TYPE_OBJECT);
         }
 
-        $timestamp = $this->stream->readDouble() / 1000;
+        $timestamp = floor($this->stream->readDouble() / 1000);
         $date      = new DateTime("@$timestamp");
 
         $this->referenceStore->addReference($date, ReferenceStore::TYPE_OBJECT);
