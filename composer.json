@@ -1,11 +1,22 @@
 {
-  "name": "infomaniac-amf/php",
-  "require": {
-    "php": ">=5.4"
-  },
-  "autoload": {
-    "psr-4": {
-      "Infomaniac\\": "lib/"
-    }
-  }
+    "name": "infomaniac-amf/php",
+    "description": "InfomaniacAMF is a PHP project for the (de)serialization of AMF packets",
+    "keywords": [ "AMF3", "AMF", "Flash" ],
+    "license": "MIT",
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Infomaniac\\": "lib/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Danny Kopping",
+            "email": "dannykopping@gmail.com",
+            "homepage": "http://infomaniac.co.za",
+            "role": "Maintainer"
+        }
+    ]
 }
