@@ -9,7 +9,8 @@
     "autoload": {
         "psr-4": {
             "Infomaniac\\": "lib/"
-        }
+        },
+        "files": ["lib/api.php"]
     },
     "authors": [
         {
