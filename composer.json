@@ -1,5 +1,5 @@
 {
-  "name": "dannykopping/amf",
+  "name": "infomaniac-amf/php",
   "require": {
     "php": ">=5.4"
   },
