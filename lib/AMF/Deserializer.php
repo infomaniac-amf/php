@@ -22,9 +22,9 @@ class Deserializer extends Base
      */
     protected $stream;
 
-    public function __construct(Input $stream)
+    public function __construct(Input $stream, $options = AMF_DEFAULT_OPTIONS)
     {
-        parent::__construct($stream);
+        parent::__construct($stream, $options = AMF_DEFAULT_OPTIONS);
     }
 
     public function deserialize($forceType = null)

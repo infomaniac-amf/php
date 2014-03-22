@@ -22,10 +22,17 @@ abstract class Base
      */
     protected $referenceStore;
 
-    public function __construct(Stream $stream)
+    /**
+     * @var int
+     */
+    protected $options;
+
+    public function __construct(Stream $stream, $options = AMF_DEFAULT_OPTIONS)
     {
-        $this->stream           = $stream;
-        $this->referenceStore   = new ReferenceStore();
+        $this->stream  = $stream;
+        $this->options = $options;
+
+        $this->referenceStore = new ReferenceStore();
     }
 
     /**

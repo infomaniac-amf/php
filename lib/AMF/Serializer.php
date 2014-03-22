@@ -19,9 +19,9 @@ class Serializer extends Base
      */
     protected $stream;
 
-    public function __construct(Output $stream)
+    public function __construct(Output $stream, $options = AMF_DEFAULT_OPTIONS)
     {
-        parent::__construct($stream);
+        parent::__construct($stream, $options);
     }
 
     public function serialize($data, $includeType = true, $forceType = null)
@@ -232,7 +232,16 @@ class Serializer extends Base
             return null;
         }
 
+        if (!$this->isClassMappingEnabled()) {
+            return '';
+        }
+
         $className = get_class($object);
         return $className == 'stdClass' ? '' : $className;
+    }
+
+    private function isClassMappingEnabled()
+    {
+        return $this->options & AMF_CLASS_MAPPING;
     }
 } 

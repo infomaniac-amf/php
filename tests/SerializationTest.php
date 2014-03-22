@@ -14,18 +14,18 @@ class SerializationTest extends PHPUnit_Framework_TestCase
 {
     public function testSerializeUndefined()
     {
-        $this->assertEquals(new Undefined(), AMF::deserialize(AMF::serialize(new Undefined())));
+        $this->assertEquals(new Undefined(), AMF::deserialize(AMF::serialize(new Undefined(), AMF_DEFAULT_OPTIONS)));
     }
 
     public function testSerializeNull()
     {
-        $this->assertSame(null, AMF::deserialize(AMF::serialize(null)));
+        $this->assertSame(null, AMF::deserialize(AMF::serialize(null, AMF_DEFAULT_OPTIONS)));
     }
 
     public function testSerializeBoolean()
     {
-        $this->assertSame(false, AMF::deserialize(AMF::serialize(false)));
-        $this->assertSame(true, AMF::deserialize(AMF::serialize(true)));
+        $this->assertSame(false, AMF::deserialize(AMF::serialize(false, AMF_DEFAULT_OPTIONS)));
+        $this->assertSame(true, AMF::deserialize(AMF::serialize(true, AMF_DEFAULT_OPTIONS)));
     }
 
     public function testSerializeInt()
@@ -33,7 +33,10 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $samples = [1, 13, 1398693, 100000000, 12345013, 9876543, Spec::MAX_INT, -123, -9999999, Spec::MIN_INT];
 
         foreach ($samples as $sample) {
-            $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_INT)));
+            $this->assertEquals(
+                $sample,
+                AMF::deserialize(AMF::serialize($sample, AMF_DEFAULT_OPTIONS, Spec::AMF3_INT))
+            );
         }
     }
 
@@ -42,7 +45,16 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $samples = [1.5, 9879.4, 999 * 999 / 2, Spec::MAX_INT + 2.0, Spec::MIN_INT * 2];
 
         foreach ($samples as $sample) {
-            $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_DOUBLE)));
+            $this->assertEquals(
+                $sample,
+                AMF::deserialize(
+                    AMF::serialize(
+                        $sample,
+                        AMF_DEFAULT_OPTIONS,
+                        Spec::AMF3_DOUBLE
+                    )
+                )
+            );
         }
     }
 
@@ -51,7 +63,10 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $samples = ['hello', '.', file_get_contents(__FILE__), 'ünicødé'];
 
         foreach ($samples as $sample) {
-            $this->assertSame($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_STRING)));
+            $this->assertSame(
+                $sample,
+                AMF::deserialize(AMF::serialize($sample, AMF_DEFAULT_OPTIONS, Spec::AMF3_STRING))
+            );
         }
     }
 
@@ -66,7 +81,7 @@ class SerializationTest extends PHPUnit_Framework_TestCase
 
         foreach ($samples as $sample) {
             $timestamp = $sample->format('U');
-            $datetime  = AMF::deserialize(AMF::serialize($sample, Spec::AMF3_DATE));
+            $datetime  = AMF::deserialize(AMF::serialize($sample, AMF_DEFAULT_OPTIONS, Spec::AMF3_DATE));
 
             $this->assertEquals($timestamp, $datetime->format('U'));
         }
@@ -85,7 +100,10 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         );
 
         foreach ($samples as $sample) {
-            $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_ARRAY)));
+            $this->assertEquals(
+                $sample,
+                AMF::deserialize(AMF::serialize($sample, AMF_DEFAULT_OPTIONS, Spec::AMF3_ARRAY))
+            );
         }
     }
 
@@ -98,18 +116,21 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $dyn->c = new Undefined();
         $dyn->d = new stdClass();
 
-        $this->assertEquals($dyn, AMF::deserialize(AMF::serialize($dyn)));
+        $this->assertEquals($dyn, AMF::deserialize(AMF::serialize($dyn, AMF_DEFAULT_OPTIONS)));
 
         // typed object
         $typed           = new NormalClass();
         $typed->property = 'value';
-        $this->assertEquals($typed, AMF::deserialize(AMF::serialize($typed)));
+        $this->assertEquals($typed, AMF::deserialize(AMF::serialize($typed, AMF_DEFAULT_OPTIONS | AMF_CLASS_MAPPING)));
 
         // serializable
         $serializable = new SerializableData();
         $serializable->setName('Test');
 
-        $this->assertEquals($serializable, AMF::deserialize(AMF::serialize($serializable)));
+        $this->assertEquals(
+            $serializable,
+            AMF::deserialize(AMF::serialize($serializable, AMF_DEFAULT_OPTIONS | AMF_CLASS_MAPPING))
+        );
 
         // reference
         $a    = new stdClass();
@@ -119,13 +140,13 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $b->property = 'abc';
 
         $a->normal = $b;
-        $this->assertEquals($a, AMF::deserialize(AMF::serialize($a)));
+        $this->assertEquals($a, AMF::deserialize(AMF::serialize($a, AMF_DEFAULT_OPTIONS | AMF_CLASS_MAPPING)));
 
         // self-reference
         $a       = new stdClass();
         $a->x    = 'y';
         $a->self = $a;
-        $this->assertEquals($a, AMF::deserialize(AMF::serialize($a)));
+        $this->assertEquals($a, AMF::deserialize(AMF::serialize($a, AMF_DEFAULT_OPTIONS)));
     }
 
     public function testSerializeBytes()
@@ -138,7 +159,16 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         ];
 
         foreach ($samples as $sample) {
-            $this->assertEquals($sample, AMF::deserialize(AMF::serialize($sample, Spec::AMF3_BYTE_ARRAY)));
+            $this->assertEquals(
+                $sample,
+                AMF::deserialize(
+                    AMF::serialize(
+                        $sample,
+                        AMF_DEFAULT_OPTIONS,
+                        Spec::AMF3_BYTE_ARRAY
+                    )
+                )
+            );
         }
     }
 }

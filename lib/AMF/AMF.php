@@ -16,21 +16,20 @@ class AMF
 {
     public static $debugMode = false;
 
-    private static function init()
+    private static function init($options = AMF_DEFAULT_OPTIONS)
     {
-        // if in debug mode, don't do anything to error handling - let it work normally
-        if(!AMF::$debugMode) {
+        if ($options & AMF_PROMOTE_ERRORS) {
             set_error_handler('\\Infomaniac\\AMF\\AMF::errorHandler');
         }
     }
 
-    public static function serialize($data, $type = null)
+    public static function serialize($data, $options = AMF_DEFAULT_OPTIONS, $type = null)
     {
         try {
-            self::init();
+            self::init($options);
 
-            $stream = new Output();
-            $serializer = new Serializer($stream);
+            $stream     = new Output();
+            $serializer = new Serializer($stream, $options);
 
             return $serializer->serialize($data, true, $type);
         } catch (Exception $e) {
@@ -45,7 +44,7 @@ class AMF
         try {
             self::init();
 
-            $stream = new Input($data);
+            $stream       = new Input($data);
             $deserializer = new Deserializer($stream);
 
             return $deserializer->deserialize($forceType);
