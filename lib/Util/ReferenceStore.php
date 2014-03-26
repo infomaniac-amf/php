@@ -4,8 +4,7 @@ namespace Infomaniac\Util;
 use Infomaniac\Exception\DeserializationException;
 
 /**
- * @author Danny Kopping <danny.kopping@zando.co.za>
- * @module
+ * @author Danny Kopping <dannykopping@gmail.com>
  */
 class ReferenceStore
 {

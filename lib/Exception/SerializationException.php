@@ -1,12 +1,10 @@
 <?php
 namespace Infomaniac\Exception;
 
-use Exception;
-
 /**
  * @author Danny Kopping <dannykopping@gmail.com>
  */
-class SerializationException extends Exception
+class SerializationException extends AMFException
 {
     protected $data;
 
