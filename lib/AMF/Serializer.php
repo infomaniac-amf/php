@@ -19,6 +19,11 @@ class Serializer extends Base
      */
     protected $stream;
 
+    /**
+     * @var callable
+     */
+    protected $classmappingCallback;
+
     public function __construct(Output $stream, $options = AMF_DEFAULT_OPTIONS)
     {
         parent::__construct($stream, $options);
@@ -236,8 +241,29 @@ class Serializer extends Base
             return '';
         }
 
-        $className = get_class($object);
+        if(is_callable($this->getClassmappingCallback())) {
+            $className = call_user_func_array($this->getClassmappingCallback(), [$object]);
+        } else {
+            $className = get_class($object);
+        }
+
         return $className == 'stdClass' ? '' : $className;
+    }
+
+    /**
+     * @param callable $classmappingCallback
+     */
+    public function setClassmappingCallback($classmappingCallback)
+    {
+        $this->classmappingCallback = $classmappingCallback;
+    }
+
+    /**
+     * @return callable
+     */
+    public function getClassmappingCallback()
+    {
+        return $this->classmappingCallback;
     }
 
     private function isClassMappingEnabled()

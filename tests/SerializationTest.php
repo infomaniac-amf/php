@@ -1,5 +1,6 @@
 <?php
 use Infomaniac\AMF\AMF;
+use Infomaniac\Exception\DeserializationException;
 use Infomaniac\Type\ByteArray;
 use Infomaniac\AMF\ISerializable;
 use Infomaniac\AMF\Spec;
@@ -147,6 +148,21 @@ class SerializationTest extends PHPUnit_Framework_TestCase
         $a->x    = 'y';
         $a->self = $a;
         $this->assertEquals($a, AMF::deserialize(AMF::serialize($a, AMF_DEFAULT_OPTIONS)));
+    }
+
+    /**
+     * @expectedException           Infomaniac\Exception\DeserializationException
+     * @expectedExceptionMessage    Class [XXX] could not be instantiated
+     */
+    public function testCustomClassmappingCallback()
+    {
+        AMF::setClassmappingCallback(function($object) {
+            return 'XXX';
+        });
+
+        $obj = new NormalClass();
+        $serialized = AMF::serialize($obj, AMF_CLASS_MAPPING);
+        AMF::deserialize($serialized);
     }
 
     public function testSerializeBytes()

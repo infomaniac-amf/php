@@ -2,6 +2,7 @@
 namespace Infomaniac\AMF;
 
 use Infomaniac\AMF\Deserializer;
+use Infomaniac\Exception\DeserializationException;
 use Infomaniac\Exception\SerializationException;
 use ErrorException;
 use Exception;
@@ -14,7 +15,7 @@ use Infomaniac\IO\Output;
  */
 class AMF
 {
-    public static $debugMode = false;
+    private static $classmappingCallback;
 
     private static function init($options = AMF_DEFAULT_OPTIONS)
     {
@@ -29,7 +30,9 @@ class AMF
             self::init($options);
 
             $stream     = new Output();
+
             $serializer = new Serializer($stream, $options);
+            $serializer->setClassmappingCallback(self::$classmappingCallback);
 
             return $serializer->serialize($data, true, $type);
         } catch (Exception $e) {
@@ -49,7 +52,7 @@ class AMF
 
             return $deserializer->deserialize($forceType);
         } catch (Exception $e) {
-            $ex = new SerializationException($e->getMessage(), $e->getCode(), $e);
+            $ex = new DeserializationException($e->getMessage(), $e->getCode(), $e);
             $ex->setData($data);
             throw $ex;
         }
@@ -85,5 +88,15 @@ class AMF
                 return false; // Make sure this ends up in $php_errormsg, if appropriate
             }
         }
+    }
+
+    /**
+     * Override the library's default mode of determining an object's fully-qualified classname
+     *
+     * @param $callback
+     */
+    public static function setClassmappingCallback($callback)
+    {
+        self::$classmappingCallback = $callback;
     }
 }

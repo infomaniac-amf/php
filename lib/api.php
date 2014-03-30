@@ -31,3 +31,10 @@ if (!function_exists('amf_decode')) {
         return AMF::deserialize($data);
     }
 }
+
+if (!function_exists('amf_set_classmapping_callback')) {
+    function amf_set_classmapping_callback($callback)
+    {
+        AMF::setClassmappingCallback($callback);
+    }
+}
