@@ -112,10 +112,11 @@ This project is licensed under the `MIT` license.
 
 ## Acknowledgements
 
-While writing this library, used several libraries to validate my progress. I would like to extend a special thanks to the following libraries and individuals:
+While writing this library, I used several libraries to validate my progress, and to help me come unstuck. I would like to extend a special thanks to the following libraries and individuals:
 
 - [SabreAMF](https://github.com/evert/SabreAMF)
 - [AmfPhp](https://github.com/silexlabs/amfphp-2.0)
 - [Charles Proxy](http://charlesproxy.com)'s wonderful AMF implementation
 - Arseny Vakhrushev ([neoxic](https://github.com/neoxic/php-amf3)) for his patience, guidance, advice and help
 - [Robert Cesaric](https://twitter.com/cesaric), [Grant McMullin](https://twitter.com/thatgrantoke) and [Andre Venter](https://twitter.com/thinkadoo) for their insight and advice
+- My esteemed colleagues at [Zando](http://zando.co.za)
