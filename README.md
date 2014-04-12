@@ -1,4 +1,18 @@
-AMF serialization/deserialization for PHP
+## Intro
+
+**AMF** (Action Message Format) is a binary data serialization protocol. Simply put, it transforms objects in memory into a binary string, and can reverse this binary string into an object in memory. It can be used just like `JSON`, and this library has been build to provide a similar API to that exposed by the `JSON` functionality in `PHP`.
+
+### Purpose
+
+The purpose of this library is to provide a consistent and symmetric implementation of the `AMF` specification in both `PHP` & `JSON`.
+
+### Why use AMF?
+
+Well, it's up to you. `JSON` is perfectly suited to the web, however it does have some shortcomings which are addressed by `AMF`. For starters, `JSON` cannot handle complex object graphs with circular references; additionally, it cannot serialize dates & byte arrays - you would need to do some additional work to support these in `JSON` (convert date to unix timestamp, byte arrays to base64).
+
+### Should I stop using JSON?
+
+Hells no. `JSON` is great; `AMF` can simply provide you with some additional funcitonality which could help you build your web app.
 
 ## Getting Started
 
@@ -56,6 +70,12 @@ $data = amf_decode($encodedData);
 
 If you were to `var_dump` this data, it would look identical to the input data given to the `amf_encode` function.
 
+```
+array (size=2)
+  'any' => string 'data' (length=4)
+  'you' => string 'like' (length=4)
+```
+
 ## Data Encoding (Serialization)
 
 The `AMF` spec allows for the serialization of several different data-types.
@@ -83,7 +103,7 @@ This library implements **10** of the **18** data-types described in the specifi
 | Vector<int>    | ✗        | Not high priority - also, possible browser incompat issue with JS |
 | Vector<uint>   | ✗        | Not high priority - also, possible browser incompat issue with JS |
 | Vector<double> | ✗        | Not high priority - also, possible browser incompat issue with JS |
-| Vector<object> | ✗        | Pointless - JS does not have typed arrays                         |
+| Vector<object> | ✗        | Not high priority - also, possible browser incompat issue with JS |
 | Dictionary     | ✗        | PHP cannot use objects are array keys                             |
 
 ## License
