@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/infomaniac-amf/php.png?branch=master)](https://travis-ci.org/infomaniac-amf/php)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/infomaniac-amf/php/badges/quality-score.png?s=022a26ec698ee16f981a1d2f687574bbcc9135f4)](https://scrutinizer-ci.com/g/infomaniac-amf/php/)
+
 ## Intro
 
 **AMF** (Action Message Format) is a binary data serialization protocol. Simply put, it transforms objects in memory into a binary string, and can reverse this binary string into an object in memory. It can be used just like `JSON`, and this library has been build to provide a similar API to that exposed by the `JSON` functionality in `PHP`.
@@ -74,6 +77,47 @@ If you were to `var_dump` this data, it would look identical to the input data g
 array (size=2)
   'any' => string 'data' (length=4)
   'you' => string 'like' (length=4)
+```
+
+## Extra Features
+
+### Class-mapping
+
+`AMF` allows you to encode an object and retain some metadata about it; for example, when serializing an instance of a class (not `stdClass`) the library will retain the class' fully qualified namespace name and use it to reconstruct an object of that type upon decoding.
+
+Consider the following class:
+
+```php
+<?php
+
+class Person {
+	public $name;
+}
+```
+
+If we encode an instance of this object, by default its class type will be ignored and when the data is decoded, the resulting value will be a plain PHP `stdClass` instance.
+
+This is how the encoded data will look in Charles:
+
+![](http://cl.ly/image/0p3K0I1g1Q0J/Image%202014.04.13%2012%3A42%3A56%20PM.png)
+
+In order to retain the class type in `AMF`, you will need to add an additional flag to the `amf_encode` function call:
+
+```php
+amf_encode($data, AMF_CLASS_MAPPING);
+```
+
+When the `AMF_CLASS_MAPPING` flag is given, the encoded data will look like this in Charles:
+
+![](http://cl.ly/image/32310O300I3S/Image%202014.04.13%2012%3A40%3A34%20PM.png)
+
+**Notice the additional `Person` metadata in this response**
+
+Now, when this data is decoded, the library will attempt to create a new instance of the `Person` class and set its public property `name` to `"bob"`.
+
+```php
+object(Person)[8]
+  public 'name' => string 'bob' (length=3)
 ```
 
 ## Data Encoding (Serialization)
